@@ -1,624 +1,447 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wiss Game</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"/>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; font-family: 'DM Sans', sans-serif; color: #f0f0f0; overflow: hidden; }
 
-    :root {
-      --bg: #0a0a0f;
-      --surface: #13131a;
-      --border: #1e1e2e;
-      --accent: #e8ff47;
-      --accent2: #ff4757;
-      --text: #f0f0f0;
-      --muted: #666;
-      --soft: #4ade80;
-      --medium: #fb923c;
-      --hard: #f43f5e;
+    #overlay {
+      position: fixed; inset: 0;
+      background: #0a0a0f;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 20px;
+      z-index: 100;
     }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 5rem; color: #e8ff47; letter-spacing: 4px; text-shadow: 0 0 40px #e8ff4760; }
+    .sub { color: #555; font-size: .9rem; letter-spacing: 2px; text-transform: uppercase; margin-top: -16px; }
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -10%, #e8ff4720 0%, transparent 70%);
+    input[type="text"] {
+      background: #13131a; border: 1px solid #1e1e2e; border-radius: 10px;
+      padding: 14px 20px; color: #f0f0f0; font-size: 1rem; font-family: 'DM Sans', sans-serif;
+      outline: none; width: 280px; text-align: center;
+      transition: border-color .2s;
+    }
+    input[type="text"]:focus { border-color: #e8ff47; }
+
+    .btn {
+      background: #e8ff47; color: #0a0a0f;
+      border: none; border-radius: 10px; padding: 14px 40px;
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 3px;
+      cursor: pointer; transition: all .2s; width: 280px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px #e8ff4740; }
+
+    #game-wrap { position: relative; width: 100vw; height: 100vh; display: none; }
+    canvas { display: block; }
+
+    #hud {
+      position: fixed; top: 16px; left: 16px;
+      background: #13131a; border: 1px solid #1e1e2e;
+      border-radius: 12px; padding: 12px 16px;
+      min-width: 160px;
       pointer-events: none;
     }
 
-    #app {
-      width: 100%;
-      max-width: 520px;
-      padding: 20px;
+    .hud-title { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 2px; color: #e8ff47; margin-bottom: 8px; }
+
+    .hp-bar { height: 8px; background: #1e1e2e; border-radius: 4px; margin-bottom: 10px; overflow: hidden; }
+    .hp-fill { height: 100%; background: #2ed573; border-radius: 4px; transition: width .3s; }
+
+    .inv-row { display: flex; align-items: center; gap: 8px; font-size: .85rem; margin-bottom: 4px; }
+    .inv-icon { font-size: 1rem; }
+    .inv-val { color: #e8ff47; font-weight: 600; }
+
+    #controls {
+      position: fixed; bottom: 16px; right: 16px;
+      background: #13131a; border: 1px solid #1e1e2e;
+      border-radius: 12px; padding: 12px 16px;
+      font-size: .75rem; color: #555;
+      pointer-events: none;
+    }
+    #controls div { margin-bottom: 3px; }
+    #controls span { color: #e8ff47; }
+
+    #kill-feed {
+      position: fixed; top: 16px; right: 16px;
+      display: flex; flex-direction: column; gap: 6px;
+      pointer-events: none;
     }
 
-    .screen { display: none; animation: fadeIn .3s ease; }
-    .screen.active { display: block; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .kill-msg {
+      background: #13131a; border: 1px solid #1e1e2e;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: .8rem; color: #f0f0f0;
+      animation: fadeOut 3s forwards;
     }
 
-    .logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 5rem;
-      letter-spacing: 4px;
-      color: var(--accent);
-      text-shadow: 0 0 40px #e8ff4750;
-      line-height: 1;
-      margin-bottom: 4px;
+    @keyframes fadeOut {
+      0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; }
     }
 
-    .tagline {
-      color: var(--muted);
-      font-size: .9rem;
-      margin-bottom: 40px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+    #flash {
+      position: fixed; inset: 0;
+      background: #ff475720;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .1s;
     }
+    #flash.show { opacity: 1; }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 16px;
-    }
-
-    .card-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      letter-spacing: 2px;
-      color: var(--accent);
-      margin-bottom: 20px;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color .2s;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-    }
-
-    input[type="text"]::placeholder { text-transform: none; letter-spacing: 0; color: var(--muted); }
-    input[type="text"]:focus { border-color: var(--accent); }
-
-    .btn {
-      width: 100%;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.2rem;
-      letter-spacing: 3px;
-      cursor: pointer;
-      transition: all .2s;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #0a0a0f;
-    }
-
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px #e8ff4740; }
-    .btn-primary:active { transform: translateY(0); }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      margin-top: 8px;
-    }
-
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-
-    .btn-danger {
-      background: var(--accent2);
-      color: white;
-    }
-
-    .difficulty-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .diff-btn {
-      padding: 16px 8px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: var(--bg);
-      color: var(--muted);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1rem;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: all .2s;
-      text-align: center;
-    }
-
-    .diff-btn .diff-icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
-
-    .diff-btn[data-diff="soft"].selected { border-color: var(--soft); color: var(--soft); background: #4ade8015; }
-    .diff-btn[data-diff="medium"].selected { border-color: var(--medium); color: var(--medium); background: #fb923c15; }
-    .diff-btn[data-diff="hard"].selected { border-color: var(--hard); color: var(--hard); background: #f43f5e15; }
-
-    .lobby-code {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 4rem;
-      letter-spacing: 10px;
-      color: var(--accent);
-      text-align: center;
-      padding: 20px;
-      border: 2px dashed var(--accent);
-      border-radius: 12px;
-      margin-bottom: 16px;
-      text-shadow: 0 0 30px #e8ff4760;
-    }
-
-    .player-count {
-      text-align: center;
-      color: var(--muted);
-      font-size: .9rem;
-      margin-bottom: 20px;
-    }
-
-    .player-count span { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
-
-    .diff-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: .75rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-
-    .diff-badge.soft { background: #4ade8020; color: var(--soft); border: 1px solid var(--soft); }
-    .diff-badge.medium { background: #fb923c20; color: var(--medium); border: 1px solid var(--medium); }
-    .diff-badge.hard { background: #f43f5e20; color: var(--hard); border: 1px solid var(--hard); }
-
-    .question-box {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 24px;
-      font-size: 1.2rem;
-      font-weight: 500;
-      line-height: 1.5;
-      text-align: center;
-    }
-
-    .question-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: .9rem;
-      letter-spacing: 3px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .scale {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .scale + .scale { margin-bottom: 20px; }
-
-    .scale-btn {
-      aspect-ratio: 1;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.3rem;
-      cursor: pointer;
-      transition: all .15s;
-    }
-
-    .scale-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
-    .scale-btn.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); transform: scale(1.08); }
-    .scale-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-    .scale-labels {
-      display: flex;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: .75rem;
-      margin-bottom: 20px;
-      padding: 0 4px;
-    }
-
-    .waiting-answers {
-      text-align: center;
-      color: var(--muted);
-      padding: 20px;
-      font-size: .9rem;
-    }
-
-    .waiting-answers .dots span {
-      animation: blink 1.4s infinite;
-      font-size: 1.5rem;
-      color: var(--accent);
-    }
-    .waiting-answers .dots span:nth-child(2) { animation-delay: .2s; }
-    .waiting-answers .dots span:nth-child(3) { animation-delay: .4s; }
-
-    @keyframes blink {
-      0%, 80%, 100% { opacity: 0; }
-      40% { opacity: 1; }
-    }
-
-    .results-question {
-      color: var(--muted);
-      font-size: .9rem;
-      text-align: center;
-      margin-bottom: 16px;
-      font-style: italic;
-    }
-
-    .bars {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-
-    .bar-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .bar-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.1rem;
-      color: var(--accent);
-      width: 24px;
-      text-align: right;
-    }
-
-    .bar-track {
-      flex: 1;
-      height: 28px;
-      background: var(--bg);
-      border-radius: 6px;
-      border: 1px solid var(--border);
+    #minimap {
+      position: fixed; bottom: 16px; left: 16px;
+      border: 1px solid #1e1e2e; border-radius: 8px;
       overflow: hidden;
-      position: relative;
     }
-
-    .bar-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 6px;
-      transition: width .8s cubic-bezier(.25, .46, .45, .94);
-      width: 0%;
-    }
-
-    .bar-count {
-      font-size: .85rem;
-      color: var(--muted);
-      width: 20px;
-    }
-
-    .error-msg {
-      background: #f43f5e20;
-      border: 1px solid var(--hard);
-      color: var(--hard);
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: .9rem;
-      display: none;
-    }
-
-    .error-msg.show { display: block; }
-
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 20px 0;
-    }
-
-    .host-only { display: none; }
-    .host-only.show { display: block; }
   </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- SCREEN: HOME -->
-  <div class="screen active" id="screen-home">
-    <div class="logo">WISS</div>
-    <div class="tagline">Le jeu anonyme • Réponds honnêtement</div>
+<div id="overlay">
+  <div class="logo">WISS</div>
+  <div class="sub">Roguelike Multijoueur</div>
+  <input type="text" id="name-input" placeholder="Ton pseudo" maxlength="12"/>
+  <button class="btn" id="btn-play">JOUER</button>
+</div>
 
-    <div class="card">
-      <div class="card-title">Créer un lobby</div>
-      <div class="difficulty-grid">
-        <div class="diff-btn" data-diff="soft">
-          <span class="diff-icon">😇</span>Soft
-        </div>
-        <div class="diff-btn" data-diff="medium">
-          <span class="diff-icon">😬</span>Medium
-        </div>
-        <div class="diff-btn" data-diff="hard">
-          <span class="diff-icon">💀</span>Hard
-        </div>
-      </div>
-      <button class="btn btn-primary" id="btn-create">Créer le lobby</button>
-    </div>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+  <canvas id="minimap" width="150" height="150"></canvas>
 
-    <div class="card">
-      <div class="card-title">Rejoindre un lobby</div>
-      <div id="join-error" class="error-msg"></div>
-      <input type="text" id="input-code" placeholder="Code du lobby" maxlength="5"/>
-      <button class="btn btn-primary" id="btn-join">Rejoindre</button>
-    </div>
+  <div id="hud">
+    <div class="hud-title" id="hud-name">Joueur</div>
+    <div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
+    <div class="inv-row"><span class="inv-icon">🌲</span> Bois <span class="inv-val" id="inv-wood">0</span></div>
+    <div class="inv-row"><span class="inv-icon">🪨</span> Pierre <span class="inv-val" id="inv-stone">0</span></div>
+    <div class="inv-row"><span class="inv-icon">✨</span> Or <span class="inv-val" id="inv-gold">0</span></div>
   </div>
 
-  <!-- SCREEN: LOBBY WAITING -->
-  <div class="screen" id="screen-lobby">
-    <div class="card">
-      <div class="card-title">Lobby</div>
-      <div class="lobby-code" id="display-code">XXXXX</div>
-      <div class="player-count">Joueurs connectés : <span id="player-count">1</span></div>
-      <div id="diff-badge-lobby" class="diff-badge soft">Soft</div>
-      <div id="lobby-error" class="error-msg"></div>
-      <div class="host-only" id="host-start-section">
-        <button class="btn btn-primary" id="btn-start">Lancer la partie</button>
-        <p style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:10px;">Il faut au moins 2 joueurs</p>
-      </div>
-      <div id="guest-waiting" style="text-align:center;color:var(--muted);font-size:.9rem;padding:12px 0;">
-        En attente que le host lance la partie...
-      </div>
-    </div>
+  <div id="controls">
+    <div><span>ZQSD / Flèches</span> — Bouger</div>
+    <div><span>Espace / Clic</span> — Attaquer</div>
   </div>
 
-  <!-- SCREEN: QUESTION -->
-  <div class="screen" id="screen-question">
-    <div class="card">
-      <div class="question-num" id="question-num">QUESTION 1</div>
-      <div class="question-box" id="question-text">...</div>
-
-      <div class="scale">
-        <button class="scale-btn" data-val="1">1</button>
-        <button class="scale-btn" data-val="2">2</button>
-        <button class="scale-btn" data-val="3">3</button>
-        <button class="scale-btn" data-val="4">4</button>
-        <button class="scale-btn" data-val="5">5</button>
-      </div>
-      <div class="scale">
-        <button class="scale-btn" data-val="6">6</button>
-        <button class="scale-btn" data-val="7">7</button>
-        <button class="scale-btn" data-val="8">8</button>
-        <button class="scale-btn" data-val="9">9</button>
-        <button class="scale-btn" data-val="10">10</button>
-      </div>
-      <div class="scale-labels">
-        <span>Pas du tout</span>
-        <span>Totalement</span>
-      </div>
-
-      <div id="waiting-others" class="waiting-answers" style="display:none;">
-        En attente des autres <div class="dots"><span>.</span><span>.</span><span>.</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCREEN: RESULTS -->
-  <div class="screen" id="screen-results">
-    <div class="card">
-      <div class="card-title">Résultats</div>
-      <div class="results-question" id="results-question"></div>
-      <div class="bars" id="results-bars"></div>
-      <div class="host-only" id="host-next-section">
-        <button class="btn btn-primary" id="btn-next">Question suivante →</button>
-      </div>
-      <div id="guest-next-waiting" style="text-align:center;color:var(--muted);font-size:.85rem;padding:10px 0;">
-        En attente de la prochaine question...
-      </div>
-    </div>
-  </div>
-
+  <div id="kill-feed"></div>
+  <div id="flash"></div>
 </div>
 
 <script>
-  const socket = io();
+const socket = io();
 
-  let currentLobbyCode = null;
-  let isHost = false;
-  let selectedDifficulty = null;
-  let hasAnswered = false;
+const overlay = document.getElementById('overlay');
+const gameWrap = document.getElementById('game-wrap');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap');
+const miniCtx = miniCanvas.getContext('2d');
 
-  // Difficulty select
-  document.querySelectorAll('.diff-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedDifficulty = btn.dataset.diff;
-    });
-  });
+let myId = null;
+let MAP = { w: 2400, h: 2400 };
+let players = [];
+let resources = [];
+let cam = { x: 0, y: 0 };
+let myInv = { wood: 0, stone: 0, gold: 0 };
+let myHp = 100;
+let myName = 'Player';
 
-  // Create lobby
-  document.getElementById('btn-create').addEventListener('click', () => {
-    if (!selectedDifficulty) {
-      alert('Choisis une difficulté !');
-      return;
-    }
-    socket.emit('create_lobby', { difficulty: selectedDifficulty });
-  });
+const keys = { up: false, down: false, left: false, right: false };
 
-  // Join lobby
-  document.getElementById('btn-join').addEventListener('click', () => {
-    const code = document.getElementById('input-code').value.trim().toUpperCase();
-    if (!code) return;
-    socket.emit('join_lobby', { code });
-  });
+// Input
+window.addEventListener('keydown', e => {
+  if (e.key === 'z' || e.key === 'ArrowUp')    { keys.up = true; send(); }
+  if (e.key === 's' || e.key === 'ArrowDown')  { keys.down = true; send(); }
+  if (e.key === 'q' || e.key === 'ArrowLeft')  { keys.left = true; send(); }
+  if (e.key === 'd' || e.key === 'ArrowRight') { keys.right = true; send(); }
+  if (e.key === ' ') { e.preventDefault(); socket.emit('attack'); }
+});
 
-  // Start game
-  document.getElementById('btn-start').addEventListener('click', () => {
-    socket.emit('start_game', { code: currentLobbyCode });
-  });
+window.addEventListener('keyup', e => {
+  if (e.key === 'z' || e.key === 'ArrowUp')    { keys.up = false; send(); }
+  if (e.key === 's' || e.key === 'ArrowDown')  { keys.down = false; send(); }
+  if (e.key === 'q' || e.key === 'ArrowLeft')  { keys.left = false; send(); }
+  if (e.key === 'd' || e.key === 'ArrowRight') { keys.right = false; send(); }
+});
 
-  // Next question
-  document.getElementById('btn-next').addEventListener('click', () => {
-    socket.emit('next_question', { code: currentLobbyCode });
-  });
+canvas.addEventListener('click', () => socket.emit('attack'));
 
-  // Answer buttons
-  document.querySelectorAll('.scale-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (hasAnswered) return;
-      document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      hasAnswered = true;
-      document.querySelectorAll('.scale-btn').forEach(b => b.disabled = true);
-      document.getElementById('waiting-others').style.display = 'block';
-      socket.emit('send_answer', { code: currentLobbyCode, answer: parseInt(btn.dataset.val) });
-    });
-  });
+function send() { socket.emit('keys', { ...keys }); }
 
-  // --- SOCKET EVENTS ---
+// Start
+document.getElementById('btn-play').addEventListener('click', () => {
+  const name = document.getElementById('name-input').value.trim() || 'Anonyme';
+  myName = name;
+  socket.emit('set_name', name);
+  overlay.style.display = 'none';
+  gameWrap.style.display = 'block';
+  resize();
+});
 
-  socket.on('lobby_created', ({ code, difficulty }) => {
-    isHost = true;
-    currentLobbyCode = code;
-    document.getElementById('display-code').textContent = code;
-    setDiffBadge(difficulty);
-    document.getElementById('host-start-section').classList.add('show');
-    document.getElementById('guest-waiting').style.display = 'none';
-    showScreen('screen-lobby');
-  });
+// Resize
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
 
-  socket.on('lobby_joined', ({ code, difficulty }) => {
-    isHost = false;
-    currentLobbyCode = code;
-    document.getElementById('display-code').textContent = code;
-    setDiffBadge(difficulty);
-    document.getElementById('host-start-section').classList.remove('show');
-    document.getElementById('guest-waiting').style.display = 'block';
-    showScreen('screen-lobby');
-  });
+// Socket
+socket.on('init', (data) => {
+  myId = data.id;
+  MAP = data.map;
+  resources = data.resources;
+});
 
-  socket.on('lobby_update', ({ playerCount }) => {
-    document.getElementById('player-count').textContent = playerCount;
-  });
+socket.on('game_state', (state) => {
+  players = state;
+  const me = players.find(p => p.id === myId);
+  if (me) {
+    cam.x = me.x - canvas.width / 2;
+    cam.y = me.y - canvas.height / 2;
+    cam.x = Math.max(0, Math.min(MAP.w - canvas.width, cam.x));
+    cam.y = Math.max(0, Math.min(MAP.h - canvas.height, cam.y));
+    myHp = me.hp;
+    updateHud(me);
+  }
+});
 
-  socket.on('error', ({ message }) => {
-    const err = document.getElementById('join-error');
-    err.textContent = message;
-    err.classList.add('show');
-    setTimeout(() => err.classList.remove('show'), 3000);
+socket.on('resource_update', (data) => {
+  const r = resources.find(r => r.id === data.id);
+  if (r) { r.alive = data.alive; if (data.x) { r.x = data.x; r.y = data.y; } }
+});
 
-    const lobbyErr = document.getElementById('lobby-error');
-    lobbyErr.textContent = message;
-    lobbyErr.classList.add('show');
-    setTimeout(() => lobbyErr.classList.remove('show'), 3000);
-  });
+socket.on('harvested', (data) => {
+  myInv = data.inv;
+  document.getElementById('inv-wood').textContent = myInv.wood;
+  document.getElementById('inv-stone').textContent = myInv.stone;
+  document.getElementById('inv-gold').textContent = myInv.gold;
+});
 
-  socket.on('new_question', ({ question, questionNumber }) => {
-    hasAnswered = false;
-    document.getElementById('question-num').textContent = `QUESTION ${questionNumber}`;
-    document.getElementById('question-text').textContent = question;
-    document.querySelectorAll('.scale-btn').forEach(b => {
-      b.classList.remove('selected');
-      b.disabled = false;
-    });
-    document.getElementById('waiting-others').style.display = 'none';
-    showScreen('screen-question');
-  });
+socket.on('hit', (data) => {
+  myHp = data.hp;
+  const flash = document.getElementById('flash');
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 150);
+});
 
-  socket.on('show_results', ({ counts, total, question }) => {
-    document.getElementById('results-question').textContent = question;
+socket.on('died', () => {
+  myInv = { wood: 0, stone: 0, gold: 0 };
+  document.getElementById('inv-wood').textContent = 0;
+  document.getElementById('inv-stone').textContent = 0;
+  document.getElementById('inv-gold').textContent = 0;
+  addKillMsg('💀 Tu es mort et tu as perdu tes ressources !');
+});
 
-    const bars = document.getElementById('results-bars');
-    bars.innerHTML = '';
-    const max = Math.max(...Object.values(counts), 1);
+function updateHud(me) {
+  document.getElementById('hud-name').textContent = me.name;
+  document.getElementById('hp-fill').style.width = (me.hp / me.maxHp * 100) + '%';
+  document.getElementById('hp-fill').style.background = me.hp > 50 ? '#2ed573' : me.hp > 25 ? '#fb923c' : '#ff4757';
+}
 
-    for (let i = 1; i <= 10; i++) {
-      const count = counts[i] || 0;
-      const pct = (count / max) * 100;
-      bars.innerHTML += `
-        <div class="bar-row">
-          <div class="bar-label">${i}</div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:0%" data-pct="${pct}"></div>
-          </div>
-          <div class="bar-count">${count > 0 ? count : ''}</div>
-        </div>`;
-    }
+function addKillMsg(msg) {
+  const feed = document.getElementById('kill-feed');
+  const el = document.createElement('div');
+  el.className = 'kill-msg';
+  el.textContent = msg;
+  feed.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
 
-    showScreen('screen-results');
+// Resource visuals
+const RES_STYLE = {
+  wood:  { color: '#2d4a22', accent: '#4ade80', icon: '🌲', label: 'Bois' },
+  stone: { color: '#3a3a3a', accent: '#94a3b8', icon: '🪨', label: 'Pierre' },
+  gold:  { color: '#5a4000', accent: '#fbbf24', icon: '✨', label: 'Or' },
+};
 
-    // Animate bars
-    setTimeout(() => {
-      document.querySelectorAll('.bar-fill').forEach(el => {
-        el.style.width = el.dataset.pct + '%';
-      });
-    }, 100);
+// Draw
+function draw() {
+  requestAnimationFrame(draw);
+  if (!myId) return;
 
-    // Host/guest UI
-    if (isHost) {
-      document.getElementById('host-next-section').classList.add('show');
-      document.getElementById('guest-next-waiting').style.display = 'none';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background grid
+  ctx.fillStyle = '#0d0d14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.strokeStyle = '#1a1a28';
+  ctx.lineWidth = 1;
+  const gridSize = 80;
+  const startX = -cam.x % gridSize;
+  const startY = -cam.y % gridSize;
+  for (let x = startX; x < canvas.width; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = startY; y < canvas.height; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(-cam.x, -cam.y);
+
+  // Map border
+  ctx.strokeStyle = '#e8ff4730';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, MAP.w, MAP.h);
+
+  // Resources
+  resources.forEach(r => {
+    if (!r.alive) return;
+    const style = RES_STYLE[r.type];
+    const s = 16;
+
+    ctx.save();
+    ctx.translate(r.x, r.y);
+
+    // Shadow
+    ctx.fillStyle = '#00000040';
+    ctx.beginPath();
+    ctx.ellipse(0, s + 4, s * 0.8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = style.color;
+    ctx.beginPath();
+    if (r.type === 'wood') {
+      // Tree trunk
+      ctx.fillRect(-4, -4, 8, 20);
+      ctx.fillStyle = style.accent;
+      ctx.beginPath();
+      ctx.arc(0, -10, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a3a10';
+      ctx.beginPath();
+      ctx.arc(-4, -14, 8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (r.type === 'stone') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s, s * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = style.accent;
+      ctx.beginPath();
+      ctx.ellipse(-4, -4, s * 0.5, s * 0.35, -0.3, 0, Math.PI * 2);
+      ctx.fill();
     } else {
-      document.getElementById('host-next-section').classList.remove('show');
-      document.getElementById('guest-next-waiting').style.display = 'block';
+      // Gold crystal
+      ctx.fillStyle = style.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -s); ctx.lineTo(s * 0.6, 0); ctx.lineTo(0, s * 0.8); ctx.lineTo(-s * 0.6, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.moveTo(0, -s); ctx.lineTo(s * 0.3, -s * 0.2); ctx.lineTo(0, 0); ctx.lineTo(-s * 0.3, -s * 0.2);
+      ctx.closePath(); ctx.fill();
     }
+
+    ctx.restore();
   });
 
-  socket.on('new_host', ({ hostId }) => {
-    if (socket.id === hostId) {
-      isHost = true;
-      document.getElementById('host-start-section').classList.add('show');
-      document.getElementById('guest-waiting').style.display = 'none';
+  // Players
+  players.forEach(p => {
+    const isMe = p.id === myId;
+    const x = p.x, y = p.y;
+    const size = 20;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Attack ring
+    if (p.attacking) {
+      ctx.strokeStyle = p.color + '80';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 50, 0, Math.PI * 2);
+      ctx.stroke();
     }
+
+    // Shadow
+    ctx.fillStyle = '#00000050';
+    ctx.beginPath();
+    ctx.ellipse(0, size + 4, size * 0.8, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body glow (me)
+    if (isMe) {
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 15;
+    }
+
+    // Body
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.roundRect(-size, -size, size * 2, size * 2, 5);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // Eyes
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(-7, -7, 5, 5);
+    ctx.fillRect(2, -7, 5, 5);
+
+    // HP bar
+    const hpW = 44;
+    ctx.fillStyle = '#1e1e2e';
+    ctx.fillRect(-hpW/2, -size - 14, hpW, 6);
+    const hpPct = p.hp / p.maxHp;
+    ctx.fillStyle = hpPct > 0.5 ? '#2ed573' : hpPct > 0.25 ? '#fb923c' : '#ff4757';
+    ctx.fillRect(-hpW/2, -size - 14, hpW * hpPct, 6);
+
+    // Name
+    ctx.fillStyle = isMe ? p.color : '#ffffff';
+    ctx.font = `${isMe ? '700' : '500'} 11px DM Sans`;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, 0, -size - 18);
+
+    ctx.restore();
   });
 
-  // --- UTILS ---
-  function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
+  ctx.restore();
 
-  function setDiffBadge(diff) {
-    const badge = document.getElementById('diff-badge-lobby');
-    badge.className = `diff-badge ${diff}`;
-    const labels = { soft: '😇 Soft', medium: '😬 Medium', hard: '💀 Hard' };
-    badge.textContent = labels[diff];
+  // Minimap
+  drawMinimap();
+}
+
+function drawMinimap() {
+  const mw = 150, mh = 150;
+  const scaleX = mw / MAP.w, scaleY = mh / MAP.h;
+
+  miniCtx.fillStyle = '#0d0d14';
+  miniCtx.fillRect(0, 0, mw, mh);
+
+  resources.forEach(r => {
+    if (!r.alive) return;
+    const style = RES_STYLE[r.type];
+    miniCtx.fillStyle = style.accent;
+    miniCtx.fillRect(r.x * scaleX - 1, r.y * scaleY - 1, 2, 2);
+  });
+
+  players.forEach(p => {
+    miniCtx.fillStyle = p.id === myId ? '#ffffff' : p.color;
+    miniCtx.beginPath();
+    miniCtx.arc(p.x * scaleX, p.y * scaleY, p.id === myId ? 3 : 2, 0, Math.PI * 2);
+    miniCtx.fill();
+  });
+
+  // Camera rect
+  const me = players.find(p => p.id === myId);
+  if (me) {
+    miniCtx.strokeStyle = '#e8ff4760';
+    miniCtx.lineWidth = 1;
+    miniCtx.strokeRect(
+      cam.x * scaleX, cam.y * scaleY,
+      canvas.width * scaleX, canvas.height * scaleY
+    );
   }
+}
+
+draw();
 </script>
 </body>
 </html>
