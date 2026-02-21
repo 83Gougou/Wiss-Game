@@ -224,6 +224,7 @@ io.on('connection', (socket) => {
     while (first.type === 'wild') { lobby.deck.push(first); first = lobby.deck.shift(); }
     lobby.discard = [first];
     addLog(lobby, '🎮 La partie commence !');
+    io.to(code).emit('game_started');
     broadcastGame(code);
   });
 
