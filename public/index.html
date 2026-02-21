@@ -466,6 +466,11 @@ socket.on('joined', ({ code }) => {
   document.getElementById('lobby-screen').style.display = 'flex';
 });
 
+socket.on('game_started', () => {
+  document.getElementById('lobby-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+});
+
 socket.on('lobby_state', (data) => {
   myCode = data.code;
   isHost = data.isHost;
