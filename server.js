@@ -4,173 +4,162 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
-const lobbies = {};
+const MAP_W = 2400;
+const MAP_H = 2400;
+const TICK = 50; // ms
+const SPEED = 4;
+const PLAYER_SIZE = 20;
+const RESOURCE_SIZE = 16;
+const ATTACK_RANGE = 50;
+const ATTACK_DMG = 10;
+const ATTACK_CD = 800; // ms
 
-const questions = {
-  soft: [
-    "Sur 10, t'es à quel point flemmard dans la vie ?",
-    "Sur 10, t'es à quel point accro à ton téléphone ?",
-    "Sur 10, t'es à quel point mauvais menteur ?",
-    "Sur 10, t'as pas encore fait ta lessive depuis combien de temps ? (1 = hier, 10 = un mois)",
-    "Sur 10, t'es à quel point jaloux/se en couple ?",
-    "Sur 10, t'es à quel point fan de toi-même ?",
-    "Sur 10, t'oublies souvent les anniversaires des gens ?",
-    "Sur 10, t'es à quel point mauvais cuisinier ?",
-    "Sur 10, t'es à quel point accro aux réseaux sociaux ?",
-    "Sur 10, t'as peur du noir ?",
-  ],
-  medium: [
-    "Sur 10, t'as déjà menti à tes parents pour couvrir quelque chose ?",
-    "Sur 10, t'as déjà volé quelque chose (même petit) ?",
-    "Sur 10, t'as déjà stalk quelqu'un sur les réseaux ?",
-    "Sur 10, t'as déjà fait semblant d'être malade pour sécher ?",
-    "Sur 10, t'as déjà lu les messages de quelqu'un sans permission ?",
-    "Sur 10, t'as déjà trahi un secret d'un ami ?",
-    "Sur 10, t'as déjà ghosté quelqu'un sans raison valable ?",
-    "Sur 10, t'as déjà menti sur ton âge ou ta situation ?",
-    "Sur 10, t'as déjà piqué de la thune à tes parents ?",
-    "Sur 10, t'as déjà fait un truc honteux sous l'alcool ?",
-  ],
-  hard: [
-    "Sur 10, t'as déjà eu des pensées que tu n'oserais jamais dire à voix haute ?",
-    "Sur 10, t'as déjà trompé quelqu'un ou t'as été tenté(e) ?",
-    "Sur 10, t'as déjà aimé quelqu'un qui était pris(e) ?",
-    "Sur 10, t'as déjà fait un truc dont tu as encore honte aujourd'hui ?",
-    "Sur 10, t'as déjà eu envie de tout plaquer et disparaître ?",
-    "Sur 10, t'as déjà menti à ton meilleur ami pour te protéger toi ?",
-    "Sur 10, t'as déjà fantasmé sur quelqu'un de ton entourage proche ?",
-    "Sur 10, t'as déjà fait semblant d'aimer quelqu'un pour ce qu'il/elle pouvait t'apporter ?",
-    "Sur 10, t'as des secrets que tu emporteras dans ta tombe ?",
-    "Sur 10, t'as déjà eu des pensées que tu jugerais chez les autres ?",
-  ]
-};
+const players = {};
+const resources = [];
 
-function generateCode() {
-  return Math.random().toString(36).substring(2, 7).toUpperCase();
+// Generate resources
+function genResources() {
+  const types = ['wood', 'stone', 'gold'];
+  const counts = { wood: 40, stone: 25, gold: 15 };
+  let id = 0;
+  for (const type of types) {
+    for (let i = 0; i < counts[type]; i++) {
+      resources.push({
+        id: id++,
+        type,
+        x: 100 + Math.random() * (MAP_W - 200),
+        y: 100 + Math.random() * (MAP_H - 200),
+        alive: true,
+        respawnAt: null,
+      });
+    }
+  }
 }
 
-function getRandomQuestion(difficulty) {
-  const list = questions[difficulty];
-  return list[Math.floor(Math.random() * list.length)];
-}
+genResources();
 
-io.on('connection', (socket) => {
-
-  // Créer un lobby
-  socket.on('create_lobby', ({ difficulty }) => {
-    const code = generateCode();
-    lobbies[code] = {
-      code,
-      difficulty,
-      host: socket.id,
-      players: [socket.id],
-      state: 'waiting', // waiting, question, results
-      currentQuestion: null,
-      answers: {},
-      questionCount: 0,
-    };
-    socket.join(code);
-    socket.emit('lobby_created', { code, difficulty });
-    io.to(code).emit('lobby_update', { playerCount: lobbies[code].players.length });
-  });
-
-  // Rejoindre un lobby
-  socket.on('join_lobby', ({ code }) => {
-    const lobby = lobbies[code];
-    if (!lobby) return socket.emit('error', { message: "Lobby introuvable !" });
-    if (lobby.state !== 'waiting') return socket.emit('error', { message: "La partie a déjà commencé !" });
-
-    lobby.players.push(socket.id);
-    socket.join(code);
-    socket.emit('lobby_joined', { code, difficulty: lobby.difficulty });
-    io.to(code).emit('lobby_update', { playerCount: lobby.players.length });
-  });
-
-  // Lancer la partie (host seulement)
-  socket.on('start_game', ({ code }) => {
-    const lobby = lobbies[code];
-    if (!lobby || lobby.host !== socket.id) return;
-    if (lobby.players.length < 2) return socket.emit('error', { message: "Il faut au moins 2 joueurs !" });
-
-    nextQuestion(code);
-  });
-
-  // Envoyer une réponse
-  socket.on('send_answer', ({ code, answer }) => {
-    const lobby = lobbies[code];
-    if (!lobby || lobby.state !== 'question') return;
-
-    lobby.answers[socket.id] = answer;
-
-    // Si tout le monde a répondu
-    if (Object.keys(lobby.answers).length === lobby.players.length) {
-      showResults(code);
+// Respawn resources
+setInterval(() => {
+  const now = Date.now();
+  resources.forEach(r => {
+    if (!r.alive && r.respawnAt && now >= r.respawnAt) {
+      r.alive = true;
+      r.x = 100 + Math.random() * (MAP_W - 200);
+      r.y = 100 + Math.random() * (MAP_H - 200);
+      io.emit('resource_update', { id: r.id, alive: true, x: r.x, y: r.y });
     }
   });
+}, 1000);
 
-  // Question suivante
-  socket.on('next_question', ({ code }) => {
-    const lobby = lobbies[code];
-    if (!lobby || lobby.host !== socket.id) return;
-    nextQuestion(code);
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+// Game tick
+setInterval(() => {
+  for (const id in players) {
+    const p = players[id];
+    let moved = false;
+
+    if (p.keys.up)    { p.y = Math.max(PLAYER_SIZE, p.y - SPEED); moved = true; }
+    if (p.keys.down)  { p.y = Math.min(MAP_H - PLAYER_SIZE, p.y + SPEED); moved = true; }
+    if (p.keys.left)  { p.x = Math.max(PLAYER_SIZE, p.x - SPEED); moved = true; }
+    if (p.keys.right) { p.x = Math.min(MAP_W - PLAYER_SIZE, p.x + SPEED); moved = true; }
+  }
+
+  // Broadcast state
+  const state = Object.values(players).map(p => ({
+    id: p.id, x: p.x, y: p.y, hp: p.hp, maxHp: p.maxHp,
+    inv: p.inventory, color: p.color, name: p.name, attacking: p.attacking
+  }));
+
+  io.emit('game_state', state);
+}, TICK);
+
+const COLORS = ['#e8ff47','#ff4757','#2ed573','#1e90ff','#ff6b81','#eccc68','#a29bfe','#fd79a8'];
+let colorIdx = 0;
+
+io.on('connection', (socket) => {
+  const color = COLORS[colorIdx % COLORS.length];
+  colorIdx++;
+
+  players[socket.id] = {
+    id: socket.id,
+    x: 200 + Math.random() * (MAP_W - 400),
+    y: 200 + Math.random() * (MAP_H - 400),
+    hp: 100, maxHp: 100,
+    inventory: { wood: 0, stone: 0, gold: 0 },
+    color,
+    name: 'Player ' + socket.id.slice(0, 4),
+    keys: { up: false, down: false, left: false, right: false },
+    attacking: false,
+    lastAttack: 0,
+  };
+
+  // Send initial data
+  socket.emit('init', {
+    id: socket.id,
+    map: { w: MAP_W, h: MAP_H },
+    resources: resources.map(r => ({ id: r.id, type: r.type, x: r.x, y: r.y, alive: r.alive })),
+  });
+
+  socket.on('keys', (keys) => {
+    if (players[socket.id]) players[socket.id].keys = keys;
+  });
+
+  socket.on('attack', () => {
+    const p = players[socket.id];
+    if (!p) return;
+    const now = Date.now();
+    if (now - p.lastAttack < ATTACK_CD) return;
+    p.lastAttack = now;
+    p.attacking = true;
+    setTimeout(() => { if (players[socket.id]) players[socket.id].attacking = false; }, 200);
+
+    // Hit nearby players
+    for (const otherId in players) {
+      if (otherId === socket.id) continue;
+      const other = players[otherId];
+      if (dist(p, other) < ATTACK_RANGE) {
+        other.hp = Math.max(0, other.hp - ATTACK_DMG);
+        io.to(otherId).emit('hit', { from: socket.id, hp: other.hp });
+        if (other.hp <= 0) {
+          // Respawn
+          other.hp = other.maxHp;
+          other.x = 200 + Math.random() * (MAP_W - 400);
+          other.y = 200 + Math.random() * (MAP_H - 400);
+          other.inventory = { wood: 0, stone: 0, gold: 0 };
+          io.to(otherId).emit('died', { killedBy: socket.id });
+        }
+      }
+    }
+
+    // Harvest nearby resources
+    resources.forEach(r => {
+      if (!r.alive) return;
+      if (dist(p, r) < ATTACK_RANGE + RESOURCE_SIZE) {
+        r.alive = false;
+        r.respawnAt = Date.now() + 8000;
+        p.inventory[r.type]++;
+        socket.emit('harvested', { type: r.type, inv: p.inventory });
+        io.emit('resource_update', { id: r.id, alive: false });
+      }
+    });
+  });
+
+  socket.on('set_name', (name) => {
+    if (players[socket.id]) players[socket.id].name = name.slice(0, 12);
   });
 
   socket.on('disconnect', () => {
-    for (const code in lobbies) {
-      const lobby = lobbies[code];
-      lobby.players = lobby.players.filter(id => id !== socket.id);
-      if (lobby.players.length === 0) {
-        delete lobbies[code];
-      } else {
-        if (lobby.host === socket.id) {
-          lobby.host = lobby.players[0];
-          io.to(code).emit('new_host', { hostId: lobby.host });
-        }
-        io.to(code).emit('lobby_update', { playerCount: lobby.players.length });
-      }
-    }
+    delete players[socket.id];
   });
 });
 
-function nextQuestion(code) {
-  const lobby = lobbies[code];
-  lobby.state = 'question';
-  lobby.answers = {};
-  lobby.questionCount++;
-  lobby.currentQuestion = getRandomQuestion(lobby.difficulty);
-
-  io.to(code).emit('new_question', {
-    question: lobby.currentQuestion,
-    questionNumber: lobby.questionCount,
-  });
-}
-
-function showResults(code) {
-  const lobby = lobbies[code];
-  lobby.state = 'results';
-
-  // Compter les votes par valeur (anonyme)
-  const counts = {};
-  for (let i = 1; i <= 10; i++) counts[i] = 0;
-  for (const playerId in lobby.answers) {
-    const val = lobby.answers[playerId];
-    counts[val] = (counts[val] || 0) + 1;
-  }
-
-  io.to(code).emit('show_results', {
-    counts,
-    total: lobby.players.length,
-    question: lobby.currentQuestion,
-    isHost: undefined, // handled client side
-  });
-}
-
 server.listen(process.env.PORT || 3000, () => {
-  console.log('Serveur démarré sur le port', process.env.PORT || 3000);
+  console.log('Server running on port', process.env.PORT || 3000);
 });
