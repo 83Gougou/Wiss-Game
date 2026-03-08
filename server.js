@@ -48,6 +48,7 @@ function clearAllIntervals(room) {
   clearInterval(room.spawnInterval);
   clearInterval(room.coinInterval);
   clearInterval(room.laserInterval);
+  clearTimeout(room.graceTimeout);
   // Per-zone intervals
   for (const key of Object.keys(room)) {
     if (key.startsWith('zoneInterval_')) clearInterval(room[key]);
@@ -242,21 +243,49 @@ io.on('connection', socket => {
     io.to(code).emit('player_died', { id: socket.id, name: p.name, time: survivalTime });
 
     const alive = Object.values(room.players).filter(p => p.alive);
+
     if (alive.length === 0) {
       endRound(room);
     } else if (alive.length === 1) {
+      // Last survivor: 25s grace period to collect coins, then end
       const winner = alive[0];
-      winner.alive = false;
-      winner.survivalTime = parseFloat(((Date.now() - room.roundStartTime) / 1000).toFixed(1));
-      winner.xpThisRound = Math.floor(winner.survivalTime * 2);
-      winner.wins = (winner.wins || 0) + 1;
-      winner.totalXP += winner.xpThisRound;
-      io.to(code).emit('player_died', { id: winner.id, name: winner.name, time: winner.survivalTime, isWinner: true });
-      endRound(room);
+      io.to(code).emit('last_player_standing', { id: winner.id, name: winner.name, graceSeconds: 25 });
+      // Cancel any existing grace timer
+      clearTimeout(room.graceTimeout);
+      room.graceTimeout = setTimeout(() => {
+        if (!rooms[code]?.started) return;
+        winner.alive = false;
+        winner.survivalTime = parseFloat(((Date.now() - room.roundStartTime) / 1000).toFixed(1));
+        winner.xpThisRound = Math.floor(winner.survivalTime * 2);
+        winner.wins = (winner.wins || 0) + 1;
+        winner.totalXP += winner.xpThisRound;
+        io.to(code).emit('player_died', { id: winner.id, name: winner.name, time: winner.survivalTime, isWinner: true });
+        endRound(room);
+      }, 25000);
     }
   });
 
+  // Winner sends final coins when grace period ends (or they can send earlier)
+  socket.on('grace_done', ({ code, coinsThisRound }) => {
+    const room = rooms[code];
+    if (!room || !room.players[socket.id]) return;
+    const p = room.players[socket.id];
+    p.coinsThisRound = coinsThisRound || p.coinsThisRound;
+    p.totalCoins = (p.totalCoins || 0);
+    // Force end now
+    clearTimeout(room.graceTimeout);
+    p.alive = false;
+    p.survivalTime = parseFloat(((Date.now() - room.roundStartTime) / 1000).toFixed(1));
+    p.xpThisRound = Math.floor(p.survivalTime * 2);
+    p.wins = (p.wins || 0) + 1;
+    p.totalXP += p.xpThisRound;
+    io.to(code).emit('player_died', { id: socket.id, name: p.name, time: p.survivalTime, isWinner: true });
+    endRound(room);
+  });
+
   socket.on('coin_collected', ({ code, coinId }) => {
+    const room = rooms[code];
+    if (room) room.activeCoins = Math.max(0, (room.activeCoins || 0) - 1);
     socket.to(code).emit('coin_taken', { coinId });
   });
 
@@ -346,15 +375,18 @@ function startRound(room) {
     }, s.ballSpawnRate);
   }, 3500);
 
-  // ── Coins ──
+  // ── Coins: max 5 at once, no expiry ──
+  room.activeCoins = 0;
   room.coinInterval = setInterval(() => {
     if (!rooms[room.code]?.started) return;
+    if (room.activeCoins >= 5) return;
+    room.activeCoins++;
     io.to(room.code).emit('coin_spawn', {
       coinId: Math.random().toString(36).slice(2),
       x: 80 + Math.random() * 640,
       y: 80 + Math.random() * 440,
     });
-  }, 7000);
+  }, 5000);
 
   // ── Lasers ──
   if (s.lasersEnabled) {
@@ -451,14 +483,14 @@ function spawnZone(room, type) {
 function endRound(room) {
   clearAllIntervals(room);
 
-  // Coin dividers by rank (winner keeps all)
   const sorted = Object.values(room.players)
     .sort((a, b) => b.survivalTime - a.survivalTime);
 
+  // Coin dividers by rank — winner keeps all, others divided
   sorted.forEach((p, i) => {
-    if (i === 0) return;
+    if (i === 0) return; // winner keeps all
     const div = 1 + i * 0.5;
-    p.coinsThisRound = Math.floor(p.coinsThisRound / div);
+    p.coinsThisRound = Math.floor((p.coinsThisRound || 0) / div);
   });
 
   const results = sorted.map(p => ({
