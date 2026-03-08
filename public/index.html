@@ -244,11 +244,31 @@ canvas{display:block;}
 #screen-effect.flash{animation:flashFx 2s forwards;}
 #screen-effect.blur-on{opacity:1;backdrop-filter:blur(12px);background:rgba(5,4,15,0.4);}
 @keyframes flashFx{0%{opacity:1;background:#fff;}40%{opacity:.6;background:#fff;}100%{opacity:0;}}
-.spawn-warn{position:absolute;border-radius:50%;border:2px solid rgba(255,77,109,0.6);pointer-events:none;
-  transform:translate(-50%,-50%);animation:spawnWarn 1.8s ease-out forwards;}
-@keyframes spawnWarn{
-  0%{width:70px;height:70px;opacity:0;border-color:rgba(255,77,109,0.8);}
-  30%{opacity:.9;}100%{width:20px;height:20px;opacity:0;border-color:rgba(255,77,109,0.2);}}
+.spawn-warn{
+  position:absolute;pointer-events:none;transform:translate(-50%,-50%);
+  width:24px;height:24px;
+}
+.spawn-warn::before,.spawn-warn::after{
+  content:'';position:absolute;background:rgba(255,30,30,0.9);border-radius:2px;
+  box-shadow:0 0 8px rgba(255,0,0,0.8);
+  animation:spawnTarget var(--dur,1000ms) ease-out forwards;
+}
+.spawn-warn::before{width:2px;height:20px;top:2px;left:11px;}
+.spawn-warn::after{width:20px;height:2px;top:11px;left:2px;}
+@keyframes spawnTarget{
+  0%{opacity:0;transform:scale(2);}
+  20%{opacity:1;transform:scale(1);}
+  80%{opacity:1;transform:scale(1);}
+  100%{opacity:0;transform:scale(0.5);}
+}
+.coin-preview{
+  position:absolute;pointer-events:none;transform:translate(-50%,-50%);
+  font-size:14px;opacity:0;
+  animation:coinPrev var(--dur,2000ms) ease-out forwards;
+}
+@keyframes coinPrev{
+  0%{opacity:0;}20%{opacity:.5;}80%{opacity:.5;}100%{opacity:0;}
+}
 
 /* HUD */
 #hud{width:192px;background:rgba(8,6,18,0.85);backdrop-filter:blur(20px);
@@ -362,10 +382,9 @@ canvas{display:block;}
 
     <div class="settings-sec">
       <div class="settings-sec-title">🔴 Créatures</div>
+      <div class="toggle-row">Créatures activées<label class="toggle"><input type="checkbox" id="opt-mobs" checked/><span class="tslider"></span></label></div>
       <span class="lbl">Vitesse de spawn</span>
       <div class="range-row"><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">Rapide</span><input type="range" id="opt-ball-spawn" min="500" max="6000" value="2000" step="250"/><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">Lent</span><div class="range-val" id="ball-spawn-val">2s</div></div>
-      <span class="lbl">Durée de vie des créatures</span>
-      <div class="range-row"><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">5s</span><input type="range" id="opt-ball-life" min="5000" max="60000" value="20000" step="1000"/><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">∞</span><div class="range-val" id="ball-life-val">20s</div></div>
       <span class="lbl">Max créatures simultanées</span>
       <div class="range-row"><input type="range" id="opt-maxballs" min="3" max="20" value="8" step="1"/><div class="range-val" id="maxballs-val">8</div></div>
     </div>
@@ -376,7 +395,7 @@ canvas{display:block;}
       <div id="laser-opts">
         <div class="toggle-row">Lasers diagonaux<label class="toggle"><input type="checkbox" id="opt-laser-diag" checked/><span class="tslider"></span></label></div>
         <span class="lbl">Fréquence</span>
-        <div class="range-row"><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">3s</span><input type="range" id="opt-laser-freq" min="3000" max="30000" value="12000" step="1000"/><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">30s</span><div class="range-val" id="laser-freq-val">12s</div></div>
+        <div class="range-row"><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">1s</span><input type="range" id="opt-laser-freq" min="1000" max="30000" value="8000" step="500"/><span style="font-size:.65rem;color:rgba(199,125,255,0.3)">30s</span><div class="range-val" id="laser-freq-val">8s</div></div>
         <span class="lbl">Lasers max simultanés</span>
         <div class="range-row"><input type="range" id="opt-laser-max" min="1" max="5" value="2"/><div class="range-val" id="laser-max-val">2</div></div>
         <span class="lbl">Durée warning</span>
@@ -643,14 +662,14 @@ const ACTIVES={
 const PASSIVES={
   mini:{id:'mini',icon:'🔬',name:'Mini',desc:'Hitbox -30%.',cost:6},
   rapace:{id:'rapace',icon:'💰',name:'Rapace',desc:'Pièces x2.',cost:5},
-  banquier:{id:'banquier',icon:'🪙',name:'Banquier',desc:'Garde 50% pièces si mort en 1er.',cost:4},
-  granite:{id:'granite',icon:'🪨',name:'Granite',desc:'Lasers ne tuent pas.',cost:7},
+  turbo:{id:'turbo',icon:'🚀',name:'Turbo',desc:'Vitesse +35% mais hitbox +20%. Traverse les murs électriques.',cost:5},
+  granite:{id:'granite',icon:'🪨',name:'Granite',desc:'Lasers et murs électriques ne tuent pas.',cost:7},
   sprint:{id:'sprint',icon:'⚡',name:'Sprint',desc:'Vitesse +20% permanente.',cost:5},
   vigilant:{id:'vigilant',icon:'👁️',name:'Vigilant',desc:'Indicateurs spawn durent 2x plus.',cost:4},
-  resilience:{id:'resilience',icon:'🛡️',name:'Résilience',desc:'CD actif réduit de 20%.',cost:5},
-  oracle:{id:'oracle',icon:'🔮',name:'Oracle',desc:'Voit spawns 1.5s plus tôt.',cost:6},
+  resilience:{id:'resilience',icon:'🛡️',name:'Résilience',desc:'CD actif -3 secondes.',cost:5},
+  oracle:{id:'oracle',icon:'🔮',name:'Oracle',desc:'Voit les pièces apparaître 2s à l\'avance.',cost:6},
   fantomatique:{id:'fantomatique',icon:'💫',name:'Fantomatique',desc:'Grosses créatures te traversent.',cost:7},
-  agilite:{id:'agilite',icon:'🏃',name:'Agilité',desc:'Diagonal aussi rapide que tout droit.',cost:3},
+  agilite:{id:'agilite',icon:'🏃',name:'Agilité',desc:'Diagonal +15% vitesse.',cost:3},
   prestige:{id:'prestige',icon:'🌟',name:'Prestige',desc:'XP x1.5 chaque manche.',cost:6},
   ardeur:{id:'ardeur',icon:'🔥',name:'Ardeur',desc:'+0.3% vitesse/sec (cap +15%).',cost:5},
   leger:{id:'leger',icon:'👻',name:'Léger',desc:'Petites créatures te traversent.',cost:7},
@@ -744,7 +763,7 @@ function makeRNG(seed){
 
 // ══ MONSTERS ══
 const BTYPES=[
-  {r:12,spd:175,type:'normal'},{r:9,spd:265,type:'fast'},
+  {r:12,spd:175,type:'normal'},{r:14,spd:265,type:'fast'},
   {r:22,spd:108,type:'big'},{r:11,spd:195,type:'yellow'},
 ];
 const BWEIGHTS=[5,2,1,2];
@@ -754,6 +773,7 @@ function spawnBall(){
   const maxB=gameSettings.maxBallsPerWave||8;
   if(balls.length>=maxB)return;
   let roll=rng()*10,acc=0,bt=BTYPES[0];
+  if(gameSettings.mobsEnabled===false)return;
   for(let i=0;i<BTYPES.length;i++){acc+=BWEIGHTS[i];if(roll<acc){bt=BTYPES[i];break;}}
   const angle=rng()*Math.PI*2;
   const side=Math.floor(rng()*4);
@@ -765,29 +785,29 @@ function spawnBall(){
   const wx=Math.max(bt.r,Math.min(W-bt.r,x));
   const wy=Math.max(bt.r,Math.min(H-bt.r,y));
   showSpawnWarn(wx,wy);
-  const life=gameSettings.ballLifespan;
-  balls.push({x,y,vx:Math.cos(angle)*bt.spd,vy:Math.sin(angle)*bt.spd,r:bt.r,type:bt.type,
-    born:Date.now(),life:life||null});
+  // No lifespan — monsters never despawn
+  balls.push({x,y,vx:Math.cos(angle)*bt.spd,vy:Math.sin(angle)*bt.spd,r:bt.r,type:bt.type,born:Date.now()});
 }
 
 function showSpawnWarn(x,y){
+  const dur=myPassives.includes('vigilant')?2000:1000;
+  const oracleExtra=myPassives.includes('oracle')?0:0; // oracle shows coin prespawn not mob
+  // Red crosshair target indicator
   const wrap=document.getElementById('arena-wrap');
   const cr=canvas.getBoundingClientRect(),wr=wrap.getBoundingClientRect();
-  const el=document.createElement('div');el.className='spawn-warn';
-  el.style.left=(cr.left-wr.left+x*(cr.width/W))+'px';
-  el.style.top=(cr.top-wr.top+y*(cr.height/H))+'px';
+  const scaleX=cr.width/W,scaleY=cr.height/H;
+  const el=document.createElement('div');
+  el.className='spawn-warn';
+  el.style.left=(cr.left-wr.left+x*scaleX)+'px';
+  el.style.top=(cr.top-wr.top+y*scaleY)+'px';
+  el.style.setProperty('--dur', dur+'ms');
   wrap.appendChild(el);
-  const dur=myPassives.includes('vigilant')?3600:1800;
-  setTimeout(()=>el.remove(),dur);
+  setTimeout(()=>el.remove(),dur+100);
 }
 
 function tickBalls(dt){
   const now=Date.now();
   const frozen=now<freezeEnd;
-  // Remove expired balls
-  if(gameSettings.ballLifespan){
-    balls=balls.filter(b=>now-b.born<gameSettings.ballLifespan);
-  }
   balls.forEach(b=>{
     if(myPassives.includes('fantomatique')&&b.type==='big')return;
     if(myPassives.includes('leger')&&b.type==='fast')return;
@@ -815,7 +835,7 @@ function tickZones(dt){
       z.pos+=z.startEdge===0?spd*dt:-spd*dt;
     }
     if(z.type==='blackhole'){
-      const force=z.force||60,range=z.range||200;
+      const force=z.force||120,range=z.range||200;
       const dx=z.x-px,dy=z.y-py,dist=Math.sqrt(dx*dx+dy*dy);
       if(dist<range&&dist>1){
         const f=force*(1-dist/range);
@@ -846,9 +866,9 @@ function checkZones(){
       if(Math.sqrt(dx*dx+dy*dy)<pulse){myDie();return;}
     }
     if(z.type==='electricwall'){
+      if(myPassives.includes('granite')||myPassives.includes('turbo'))continue;
       const pos=z.pos||0,gap=z.gap||90,gapCenter=z.gapCenter||((z.isHorizontal?W:H)/2);
       const wallThick=8;
-      // Check if in gap — if yes, safe
       let inGap;
       if(z.isHorizontal){
         inGap=(px>gapCenter-gap/2&&px<gapCenter+gap/2);
@@ -866,13 +886,24 @@ function checkZones(){
 }
 
 // ══ PLAYER ══
+function getHR(){
+  let r=BASE_R;
+  if(myPassives.includes('mini'))r*=0.7;
+  if(myPassives.includes('turbo'))r*=1.2;
+  return r;
+}
+
 function tickPlayer(dt){
   if(!myAlive||!gameRunning)return;
   let dx=0,dy=0;
   if(keys.up)dy-=1;if(keys.down)dy+=1;if(keys.left)dx-=1;if(keys.right)dx+=1;
-  if(dx!==0&&dy!==0&&!myPassives.includes('agilite')){dx*=DIAG;dy*=DIAG;}
+  const isDiag=dx!==0&&dy!==0;
+  if(isDiag&&!myPassives.includes('agilite')&&!myPassives.includes('turbo')){dx*=DIAG;dy*=DIAG;}
+  else if(isDiag&&myPassives.includes('agilite')){/* full speed diagonal */}
   let spd=SPEED;
   if(myPassives.includes('sprint'))spd*=1.2;
+  if(myPassives.includes('turbo'))spd*=1.35;
+  if(isDiag&&myPassives.includes('agilite'))spd*=1.15;
   if(myPassives.includes('ardeur'))spd*=(1+ardeurPct/100);
   if(Date.now()<rebondBoost)spd*=1.25;
   if(Date.now()<dashEnd)spd*=4;
@@ -884,10 +915,8 @@ function tickPlayer(dt){
     const tc=prof.trail==='trail_rainbow'?`hsl(${Date.now()/20%360},100%,65%)`:prof.color;
     trailPts.push({x:px,y:py,c:tc});if(trailPts.length>24)trailPts.shift();
   }
-  socket.emit('player_pos',{code:myCode,x:Math.round(px),y:Math.round(py)});
+  socket.emit('player_pos',{code:myCode,x:Math.round(px),y:Math.round(py),emoji:prof.emoji});
 }
-
-function getHR(){return myPassives.includes('mini')?BASE_R*0.7:BASE_R;}
 
 function checkCollision(){
   if(!myAlive)return;
@@ -927,7 +956,6 @@ function checkLasers(){
     if(l.type==='diagonal135'){if(Math.abs(py+px-l.position)/1.414<hr+4){myDie();return;}}
   }
 }
-
 function checkEclair(){
   if(!myAlive||Date.now()<iframeEnd||Date.now()<ghostEnd)return;
   const hr=getHR();
@@ -953,9 +981,9 @@ function myDie(){
 function useActive(){
   if(!myAlive||!myActive||!gameRunning)return;
   const ab=ACTIVES[myActive];if(!ab)return;
-  const cdMult=myPassives.includes('resilience')?0.8:1;
+  const cdReduction=myPassives.includes('resilience')?3000:0;
   if(Date.now()<activeCD)return;
-  activeCD=Date.now()+ab.cd*cdMult;
+  activeCD=Date.now()+Math.max(1000,ab.cd-cdReduction);
   switch(myActive){
     case 'dash':ghostEnd=Date.now()+500;iframeEnd=Date.now()+500;dashEnd=Date.now()+150;notif('⚡ Dash !','good');break;
     case 'brouillard':socket.emit('use_active',{code:myCode,ability:'brouillard'});notif('🌫️ Brouillard !','good');break;
@@ -972,15 +1000,6 @@ function useActive(){
 function drawMonster(b){
   ctx.save();
   const now=Date.now();
-  // Life fade
-  let alpha=1;
-  if(b.life){
-    const age=now-b.born;
-    const fadePct=0.25;// fade last 25% of life
-    const fadeStart=b.life*(1-fadePct);
-    if(age>fadeStart)alpha=Math.max(0,1-(age-fadeStart)/(b.life*fadePct));
-  }
-  ctx.globalAlpha=alpha;
   const flick=flickerCreatures&&now<flickerEnd&&Math.floor(now/80)%2===0;
   if(flick){ctx.restore();return;}
   switch(b.type){
@@ -1028,16 +1047,6 @@ function drawMonster(b){
       ctx.fillStyle='#fff';for(let i=0;i<3;i++)ctx.fillRect(b.x-s/2+4+i*(s/3-1),b.y+s/2-7,s/3-4,7);
       ctx.fillStyle='#1a0a1e';ctx.beginPath();ctx.arc(b.x-4,b.y-3,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(b.x+4,b.y-3,2.5,0,Math.PI*2);ctx.fill();
       break;}
-  }
-  // Life bar
-  if(b.life){
-    const age=Date.now()-b.born;
-    const pct=Math.max(0,1-age/b.life);
-    const bw=b.r*2;
-    ctx.globalAlpha=alpha*.7;
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(b.x-b.r,b.y-b.r-7,bw,4);
-    const barColor=pct>0.5?`hsl(${pct*120},100%,55%)`:`hsl(${pct*120},100%,55%)`;
-    ctx.fillStyle=barColor;ctx.fillRect(b.x-b.r,b.y-b.r-7,bw*pct,4);
   }
   ctx.restore();
 }
@@ -1268,9 +1277,8 @@ document.getElementById('mb-shop').addEventListener('click',()=>{loadCosmShop();
 const RANGES=[
   ['opt-rounds','rounds-val',v=>v],
   ['opt-ball-spawn','ball-spawn-val',v=>(v/1000).toFixed(2).replace(/\.?0+$/,'')+'s'],
-  ['opt-ball-life','ball-life-val',v=>v>=60000?'∞':Math.floor(v/1000)+'s'],
   ['opt-maxballs','maxballs-val',v=>v],
-  ['opt-laser-freq','laser-freq-val',v=>Math.floor(v/1000)+'s'],
+  ['opt-laser-freq','laser-freq-val',v=>(v/1000).toFixed(1).replace(/\.0$/,'')+'s'],
   ['opt-laser-max','laser-max-val',v=>v],
   ['opt-laser-warn','laser-warn-val',v=>(v/1000).toFixed(1)+'s'],
   ['z-poison-rate','z-poison-rate-v',v=>(v/1000).toFixed(0)+'s'],
@@ -1293,14 +1301,13 @@ document.getElementById('opt-lasers').addEventListener('change',function(){docum
 document.getElementById('opt-zones').addEventListener('change',function(){document.getElementById('zone-opts').style.display=this.checked?'block':'none';});
 
 document.getElementById('btn-create').addEventListener('click',()=>{
-  const ballLife=parseInt(document.getElementById('opt-ball-life').value);
   socket.emit('create_room',{
     name:prof.name,color:prof.color,trail:prof.trail,emoji:prof.emoji,level:prof.level,
     isPrivate:document.getElementById('opt-private').checked,
     totalRounds:parseInt(document.getElementById('opt-rounds').value),
     settings:{
+      mobsEnabled:document.getElementById('opt-mobs').checked,
       ballSpawnRate:parseInt(document.getElementById('opt-ball-spawn').value),
-      ballLifespan:ballLife>=60000?null:ballLife,
       maxBallsPerWave:parseInt(document.getElementById('opt-maxballs').value),
       lasersEnabled:document.getElementById('opt-lasers').checked,
       laserFrequency:parseInt(document.getElementById('opt-laser-freq').value),
@@ -1317,6 +1324,8 @@ document.getElementById('btn-create').addEventListener('click',()=>{
     },
   });
 });
+
+function notif(msg,type='def'){const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
 
 // ══ JOIN ══
 document.getElementById('btn-join-code').addEventListener('click',()=>{
@@ -1525,7 +1534,15 @@ socket.on('round_start',({seed,round,totalRounds:tr,players:pl,settings})=>{
 });
 
 socket.on('spawn_signal',()=>spawnBall());
-socket.on('coin_spawn',({coinId,x,y})=>{coins.push({id:coinId,x,y});setTimeout(()=>{coins=coins.filter(c=>c.id!==coinId);},7000);});
+socket.on('coin_spawn',({coinId,x,y})=>{
+  if(myPassives.includes('oracle')){
+    // Show coin location 2s before it appears
+    showCoinPreview(x,y,2000);
+    setTimeout(()=>coins.push({id:coinId,x,y}),2000);
+  } else {
+    coins.push({id:coinId,x,y});
+  }
+});
 socket.on('coin_taken',({coinId})=>{coins=coins.filter(c=>c.id!==coinId);});
 
 // Zone spawn: include all custom params
@@ -1546,10 +1563,11 @@ socket.on('laser_fire',({type,position})=>{
   const l=lasers.find(x=>x.type===type&&x.position===position&&!x.fired);if(l)l.fired=true;
   setTimeout(()=>{lasers=lasers.filter(x=>!(x.type===type&&x.position===position));},500);
 });
-socket.on('player_moved',({id,x,y})=>{
+socket.on('player_moved',({id,x,y,emoji})=>{
   const p=players[id];if(!p)return;
   if(p.trailPts){p.trailPts.push({x,y,c:p.color});if(p.trailPts.length>20)p.trailPts.shift();}
   p.x=x;p.y=y;
+  if(emoji!==undefined)p.emoji=emoji;
 });
 socket.on('player_died',({id,name,time,isWinner})=>{
   const p=players[id];if(p)p.alive=false;
@@ -1593,7 +1611,31 @@ socket.on('go_to_lobby',()=>{myActive=null;myPassives=[];document.getElementById
 socket.on('go_to_menu',()=>{myActive=null;myPassives=[];showScreen('menu-screen');});
 socket.on('error',({msg})=>{'browser-err,lobby-err,create-err'.split(',').forEach(id=>{const el=document.getElementById(id);if(!el)return;el.textContent=msg;setTimeout(()=>el.textContent='',3000);});});
 
-function notif(msg,type='def'){const el=document.createElement('div');el.className=`notif ${type}`;el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
+function showCoinPreview(x,y,dur){
+  const wrap=document.getElementById('arena-wrap');
+  const cr=canvas.getBoundingClientRect(),wr=wrap.getBoundingClientRect();
+  const scaleX=cr.width/W,scaleY=cr.height/H;
+  const el=document.createElement('div');el.className='coin-preview';
+  el.style.left=(cr.left-wr.left+x*scaleX)+'px';
+  el.style.top=(cr.top-wr.top+y*scaleY)+'px';
+  el.style.setProperty('--dur',dur+'ms');
+  el.textContent='🪙';
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),dur+100);
+}
+
+socket.on('last_player_standing',({id,name,graceSeconds})=>{
+  if(id===myId){
+    // Show grace timer overlay
+    const overlay=document.getElementById('death-overlay');
+    overlay.style.display='flex';
+    overlay.innerHTML=`<div class="death-title" style="color:var(--gold)">👑 VICTOIRE !</div><div class="death-sub" style="color:var(--gold);font-size:1rem;" id="grace-countdown">Collecte tes pièces ! ${graceSeconds}s</div>`;
+    let t=graceSeconds;
+    const iv=setInterval(()=>{t--;const el=document.getElementById('grace-countdown');if(el)el.textContent=`Collecte tes pièces ! ${t}s`;if(t<=0)clearInterval(iv);},1000);
+  } else {
+    notif(`👑 ${name} survit ! +${graceSeconds}s`,'good');
+  }
+});
 
 // ══ INIT ══
 updateMenuProfile();drawSkinPreview();socket.emit('get_rooms');
