@@ -111,24 +111,11 @@ function defaultSettings() {
     zonesEnabled: true,
     // Per-zone settings
     zones: {
-      poison: {
-        enabled: true,
-        spawnRate: 10000,
-        duration: 20000,
-        radius: 70,
-        poisonDelay: 1500,
-      },
-      fire: {
-        enabled: true,
-        spawnRate: 12000,
-        duration: 15000,
-        radius: 50,
-      },
       blackhole: {
         enabled: true,
         spawnRate: 15000,
         duration: 18000,
-        force: 60,
+        force: 120,
         range: 200,
       },
       electricwall: {
@@ -152,7 +139,7 @@ io.on('connection', socket => {
     // Merge nested zones
     if (settings?.zones) {
       merged.zones = {};
-      for (const zType of ['poison', 'fire', 'blackhole', 'electricwall']) {
+      for (const zType of ['blackhole', 'electricwall']) {
         merged.zones[zType] = Object.assign({}, def.zones[zType], settings.zones[zType] || {});
       }
     }
@@ -410,7 +397,7 @@ function startRound(room) {
 
   // ── Zones: each type has its own independent interval ──
   if (s.zonesEnabled) {
-    const zTypes = ['poison', 'fire', 'blackhole', 'electricwall'];
+    const zTypes = ['blackhole', 'electricwall'];
     zTypes.forEach(zType => {
       const zc = s.zones?.[zType];
       if (!zc?.enabled) return;
@@ -438,18 +425,7 @@ function spawnZone(room, type) {
   const zoneId = Math.random().toString(36).slice(2);
   let data = { zoneId, type };
 
-  if (type === 'poison') {
-    data.x = 100 + Math.random() * 600;
-    data.y = 100 + Math.random() * 400;
-    data.r = zc.radius || 70;
-    data.poisonDelay = zc.poisonDelay || 1500;
-    data.duration = zc.duration || 20000;
-  } else if (type === 'fire') {
-    data.x = 100 + Math.random() * 600;
-    data.y = 100 + Math.random() * 400;
-    data.r = zc.radius || 50;
-    data.duration = zc.duration || 15000;
-  } else if (type === 'blackhole') {
+  if (type === 'blackhole') {
     data.x = 150 + Math.random() * 500;
     data.y = 150 + Math.random() * 300;
     data.r = 40;
