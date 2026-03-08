@@ -408,46 +408,6 @@ canvas{display:block;}
       <div class="toggle-row">Zones activées<label class="toggle"><input type="checkbox" id="opt-zones" checked/><span class="tslider"></span></label></div>
       <div id="zone-opts">
 
-        <!-- POISON -->
-        <div style="margin:10px 0 4px;font-family:'Cinzel',serif;font-size:.68rem;color:rgba(128,255,150,0.5);letter-spacing:1px;">☠️ Poison</div>
-        <div class="toggle-row" style="margin-bottom:6px;">Activé<label class="toggle"><input type="checkbox" id="z-poison-en" checked/><span class="tslider"></span></label></div>
-        <div class="settings-2col">
-          <div>
-            <span class="lbl">Spawn</span>
-            <div class="range-row"><input type="range" id="z-poison-rate" min="3000" max="30000" value="10000" step="1000"/><div class="range-val" id="z-poison-rate-v">10s</div></div>
-          </div>
-          <div>
-            <span class="lbl">Durée</span>
-            <div class="range-row"><input type="range" id="z-poison-dur" min="5000" max="40000" value="20000" step="1000"/><div class="range-val" id="z-poison-dur-v">20s</div></div>
-          </div>
-          <div>
-            <span class="lbl">Rayon</span>
-            <div class="range-row"><input type="range" id="z-poison-r" min="30" max="150" value="70" step="5"/><div class="range-val" id="z-poison-r-v">70</div></div>
-          </div>
-          <div>
-            <span class="lbl">Délai mort</span>
-            <div class="range-row"><input type="range" id="z-poison-delay" min="500" max="4000" value="1500" step="100"/><div class="range-val" id="z-poison-delay-v">1.5s</div></div>
-          </div>
-        </div>
-
-        <!-- FEU -->
-        <div style="margin:10px 0 4px;font-family:'Cinzel',serif;font-size:.68rem;color:rgba(255,100,50,0.6);letter-spacing:1px;">🔥 Feu</div>
-        <div class="toggle-row" style="margin-bottom:6px;">Activé<label class="toggle"><input type="checkbox" id="z-fire-en" checked/><span class="tslider"></span></label></div>
-        <div class="settings-2col">
-          <div>
-            <span class="lbl">Spawn</span>
-            <div class="range-row"><input type="range" id="z-fire-rate" min="3000" max="30000" value="12000" step="1000"/><div class="range-val" id="z-fire-rate-v">12s</div></div>
-          </div>
-          <div>
-            <span class="lbl">Durée</span>
-            <div class="range-row"><input type="range" id="z-fire-dur" min="5000" max="40000" value="15000" step="1000"/><div class="range-val" id="z-fire-dur-v">15s</div></div>
-          </div>
-          <div>
-            <span class="lbl">Rayon</span>
-            <div class="range-row"><input type="range" id="z-fire-r" min="20" max="120" value="50" step="5"/><div class="range-val" id="z-fire-r-v">50</div></div>
-          </div>
-        </div>
-
         <!-- TROU NOIR -->
         <div style="margin:10px 0 4px;font-family:'Cinzel',serif;font-size:.68rem;color:rgba(199,125,255,0.5);letter-spacing:1px;">⚫ Trou noir</div>
         <div class="toggle-row" style="margin-bottom:6px;">Activé<label class="toggle"><input type="checkbox" id="z-black-en" checked/><span class="tslider"></span></label></div>
@@ -772,8 +732,8 @@ function spawnBall(){
   if(!gameRunning)return;
   const maxB=gameSettings.maxBallsPerWave||8;
   if(balls.length>=maxB)return;
-  let roll=rng()*10,acc=0,bt=BTYPES[0];
   if(gameSettings.mobsEnabled===false)return;
+  let roll=rng()*10,acc=0,bt=BTYPES[0];
   for(let i=0;i<BTYPES.length;i++){acc+=BWEIGHTS[i];if(roll<acc){bt=BTYPES[i];break;}}
   const angle=rng()*Math.PI*2;
   const side=Math.floor(rng()*4);
@@ -784,15 +744,16 @@ function spawnBall(){
   else{x=-bt.r-2;y=rng()*H;}
   const wx=Math.max(bt.r,Math.min(W-bt.r,x));
   const wy=Math.max(bt.r,Math.min(H-bt.r,y));
-  showSpawnWarn(wx,wy);
-  // No lifespan — monsters never despawn
-  balls.push({x,y,vx:Math.cos(angle)*bt.spd,vy:Math.sin(angle)*bt.spd,r:bt.r,type:bt.type,born:Date.now()});
+  const delay=myPassives.includes('vigilant')?2000:1000;
+  // Show indicator FIRST, spawn monster after delay
+  showSpawnWarn(wx,wy,delay);
+  setTimeout(()=>{
+    if(!gameRunning)return;
+    balls.push({x,y,vx:Math.cos(angle)*bt.spd,vy:Math.sin(angle)*bt.spd,r:bt.r,type:bt.type,born:Date.now()});
+  },delay);
 }
 
-function showSpawnWarn(x,y){
-  const dur=myPassives.includes('vigilant')?2000:1000;
-  const oracleExtra=myPassives.includes('oracle')?0:0; // oracle shows coin prespawn not mob
-  // Red crosshair target indicator
+function showSpawnWarn(x,y,dur){
   const wrap=document.getElementById('arena-wrap');
   const cr=canvas.getBoundingClientRect(),wr=wrap.getBoundingClientRect();
   const scaleX=cr.width/W,scaleY=cr.height/H;
@@ -800,7 +761,7 @@ function showSpawnWarn(x,y){
   el.className='spawn-warn';
   el.style.left=(cr.left-wr.left+x*scaleX)+'px';
   el.style.top=(cr.top-wr.top+y*scaleY)+'px';
-  el.style.setProperty('--dur', dur+'ms');
+  el.style.setProperty('--dur',dur+'ms');
   wrap.appendChild(el);
   setTimeout(()=>el.remove(),dur+100);
 }
@@ -852,19 +813,6 @@ function checkZones(){
   const hr=getHR();
   const now=Date.now();
   for(const z of zones){
-    if(z.type==='poison'){
-      const dx=px-z.x,dy=py-z.y;
-      if(Math.sqrt(dx*dx+dy*dy)<z.r){
-        if(!z.poisonStart)z.poisonStart=now;
-        const delay=z.poisonDelay||1500;
-        if(now-z.poisonStart>delay){myDie();return;}
-      } else z.poisonStart=null;
-    }
-    if(z.type==='fire'){
-      const dx=px-z.x,dy=py-z.y;
-      const pulse=z.r*(0.85+Math.sin(now/300)*0.15);
-      if(Math.sqrt(dx*dx+dy*dy)<pulse){myDie();return;}
-    }
     if(z.type==='electricwall'){
       if(myPassives.includes('granite')||myPassives.includes('turbo'))continue;
       const pos=z.pos||0,gap=z.gap||90,gapCenter=z.gapCenter||((z.isHorizontal?W:H)/2);
@@ -1055,33 +1003,6 @@ function drawZone(z){
   ctx.save();
   const now=Date.now();
   switch(z.type){
-    case 'poison':{
-      const pulse=0.7+Math.sin(now/400)*0.15;
-      const inZone=z.poisonStart!=null;
-      ctx.shadowColor='#80ffdb';ctx.shadowBlur=20;
-      ctx.strokeStyle=`rgba(128,255,150,${inZone?0.9:0.35})`;ctx.lineWidth=2;ctx.setLineDash([8,6]);
-      ctx.beginPath();ctx.arc(z.x,z.y,z.r*pulse,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-      const gp=ctx.createRadialGradient(z.x,z.y,0,z.x,z.y,z.r*pulse);
-      gp.addColorStop(0,`rgba(128,255,150,${inZone?.25:.1})`);gp.addColorStop(1,'rgba(128,255,150,0)');
-      ctx.fillStyle=gp;ctx.beginPath();ctx.arc(z.x,z.y,z.r*pulse,0,Math.PI*2);ctx.fill();
-      if(inZone&&z.poisonStart){
-        const delay=z.poisonDelay||1500;
-        const pct=Math.min(1,(now-z.poisonStart)/delay);
-        ctx.fillStyle='rgba(128,255,150,0.8)';ctx.fillRect(z.x-30,z.y+z.r+8,60*pct,4);
-        ctx.strokeStyle='rgba(128,255,150,0.3)';ctx.lineWidth=1;ctx.strokeRect(z.x-30,z.y+z.r+8,60,4);
-      }
-      ctx.font=`${Math.floor(z.r*.4)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('☠️',z.x,z.y);
-      break;}
-    case 'fire':{
-      const pulse=z.r*(0.85+Math.sin(now/250)*0.15);
-      ctx.shadowColor='#ff6348';ctx.shadowBlur=30;
-      const gf=ctx.createRadialGradient(z.x,z.y,0,z.x,z.y,pulse);
-      gf.addColorStop(0,'rgba(255,100,50,0.5)');gf.addColorStop(0.6,'rgba(255,50,20,0.25)');gf.addColorStop(1,'rgba(255,30,0,0)');
-      ctx.fillStyle=gf;ctx.beginPath();ctx.arc(z.x,z.y,pulse,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle=`rgba(255,100,50,${0.5+Math.sin(now/150)*.25})`;ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(z.x,z.y,pulse,0,Math.PI*2);ctx.stroke();
-      ctx.font=`${Math.floor(z.r*.45)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🔥',z.x,z.y);
-      break;}
     case 'blackhole':{
       const rot=(now/1000)%(Math.PI*2);ctx.shadowColor='#c77dff';ctx.shadowBlur=30;
       for(let i=3;i>=1;i--){const r=40*(0.4+i*.25);
@@ -1281,13 +1202,6 @@ const RANGES=[
   ['opt-laser-freq','laser-freq-val',v=>(v/1000).toFixed(1).replace(/\.0$/,'')+'s'],
   ['opt-laser-max','laser-max-val',v=>v],
   ['opt-laser-warn','laser-warn-val',v=>(v/1000).toFixed(1)+'s'],
-  ['z-poison-rate','z-poison-rate-v',v=>(v/1000).toFixed(0)+'s'],
-  ['z-poison-dur','z-poison-dur-v',v=>(v/1000).toFixed(0)+'s'],
-  ['z-poison-r','z-poison-r-v',v=>v],
-  ['z-poison-delay','z-poison-delay-v',v=>(v/1000).toFixed(1)+'s'],
-  ['z-fire-rate','z-fire-rate-v',v=>(v/1000).toFixed(0)+'s'],
-  ['z-fire-dur','z-fire-dur-v',v=>(v/1000).toFixed(0)+'s'],
-  ['z-fire-r','z-fire-r-v',v=>v],
   ['z-black-rate','z-black-rate-v',v=>(v/1000).toFixed(0)+'s'],
   ['z-black-dur','z-black-dur-v',v=>(v/1000).toFixed(0)+'s'],
   ['z-black-force','z-black-force-v',v=>v],
@@ -1316,8 +1230,6 @@ document.getElementById('btn-create').addEventListener('click',()=>{
       laserDiagonal:document.getElementById('opt-laser-diag').checked,
       zonesEnabled:document.getElementById('opt-zones').checked,
       zones:{
-        poison:{enabled:document.getElementById('z-poison-en').checked,spawnRate:parseInt(document.getElementById('z-poison-rate').value),duration:parseInt(document.getElementById('z-poison-dur').value),radius:parseInt(document.getElementById('z-poison-r').value),poisonDelay:parseInt(document.getElementById('z-poison-delay').value)},
-        fire:{enabled:document.getElementById('z-fire-en').checked,spawnRate:parseInt(document.getElementById('z-fire-rate').value),duration:parseInt(document.getElementById('z-fire-dur').value),radius:parseInt(document.getElementById('z-fire-r').value)},
         blackhole:{enabled:document.getElementById('z-black-en').checked,spawnRate:parseInt(document.getElementById('z-black-rate').value),duration:parseInt(document.getElementById('z-black-dur').value),force:parseInt(document.getElementById('z-black-force').value),range:parseInt(document.getElementById('z-black-range').value)},
         electricwall:{enabled:document.getElementById('z-elec-en').checked,spawnRate:parseInt(document.getElementById('z-elec-rate').value),speed:parseInt(document.getElementById('z-elec-speed').value),gap:parseInt(document.getElementById('z-elec-gap').value)},
       },
