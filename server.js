@@ -236,8 +236,7 @@ io.on('connection', socket => {
     } else if (alive.length === 1) {
       // Last survivor: 25s grace period to collect coins, then end
       const winner = alive[0];
-      io.to(code).emit('last_player_standing', { id: winner.id, name: winner.name, graceSeconds: 25 });
-      // Cancel any existing grace timer
+      io.to(code).emit('last_player_standing', { id: winner.id, name: winner.name, graceSeconds: 15 });
       clearTimeout(room.graceTimeout);
       room.graceTimeout = setTimeout(() => {
         if (!rooms[code]?.started) return;
@@ -248,7 +247,7 @@ io.on('connection', socket => {
         winner.totalXP += winner.xpThisRound;
         io.to(code).emit('player_died', { id: winner.id, name: winner.name, time: winner.survivalTime, isWinner: true });
         endRound(room);
-      }, 25000);
+      }, 15000);
     }
   });
 
@@ -459,15 +458,9 @@ function spawnZone(room, type) {
 function endRound(room) {
   clearAllIntervals(room);
 
+  // Everyone keeps all their coins — no divider
   const sorted = Object.values(room.players)
     .sort((a, b) => b.survivalTime - a.survivalTime);
-
-  // Coin dividers by rank — winner keeps all, others divided
-  sorted.forEach((p, i) => {
-    if (i === 0) return; // winner keeps all
-    const div = 1 + i * 0.5;
-    p.coinsThisRound = Math.floor((p.coinsThisRound || 0) / div);
-  });
 
   const results = sorted.map(p => ({
     id: p.id, name: p.name, color: p.color, emoji: p.emoji,
