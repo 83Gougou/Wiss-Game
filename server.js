@@ -44,16 +44,18 @@ function broadcastLobby(code) {
   });
 }
 
-function clearIntervals(room) {
-  clearInterval(room.spawnInterval);
+function clearAllIntervals(room) {
+  clearInterval(room.waveInterval);
   clearInterval(room.coinInterval);
   clearInterval(room.laserInterval);
+  clearInterval(room.zoneInterval);
+  clearTimeout(room.waveTimeout);
 }
 
 function cleanupRoom(code) {
   const room = rooms[code];
   if (!room) return;
-  clearIntervals(room);
+  clearAllIntervals(room);
   delete rooms[code];
   broadcastPublicRooms();
 }
@@ -69,18 +71,13 @@ function leaveRoom(socket, code) {
     room.host = Object.keys(room.players)[0];
     io.to(code).emit('new_host', { hostId: room.host });
   }
-  if (room.started) {
-    const alive = Object.values(room.players).filter(p => p.alive);
-    if (alive.length <= 1) endRound(room);
-  } else {
-    broadcastLobby(code);
-  }
+  broadcastLobby(code);
   broadcastPublicRooms();
 }
 
 function mkPlayer(id, name, color, trail, emoji, level) {
   return {
-    id, name: name||'Joueur', color: color||'#ff6b6b',
+    id, name: name||'Joueur', color: color||'#c77dff',
     trail: trail||'none', emoji: emoji||'', level: level||1,
     alive: true, survivalTime: 0,
     xpThisRound: 0, coinsThisRound: 0,
@@ -90,21 +87,39 @@ function mkPlayer(id, name, color, trail, emoji, level) {
   };
 }
 
+function defaultSettings() {
+  return {
+    lasersEnabled: true,
+    laserFrequency: 20000,
+    laserMaxSimultaneous: 2,
+    laserWarningDuration: 1800,
+    laserDiagonal: true,
+    zonesEnabled: true,
+    waveDuration: 20000,      // duration of each wave phase
+    waveResetDuration: 4000,  // pause between waves
+    maxBallsPerWave: 6,
+    ballSpawnRate: 3000,
+    zoneSpawnRate: 8000,
+  };
+}
+
 io.on('connection', socket => {
 
-  socket.on('create_room', ({ name, color, trail, emoji, level, isPrivate, totalRounds, maxBalls, spawnRate, settings }) => {
+  socket.on('create_room', ({ name, color, trail, emoji, level, isPrivate, totalRounds, settings }) => {
     for (const c in rooms) if (rooms[c].players[socket.id]) leaveRoom(socket, c);
     const code = genCode();
+    const merged = Object.assign(defaultSettings(), settings || {});
     rooms[code] = {
       code, isPrivate: !!isPrivate,
       host: socket.id, players: {},
-      started: false, currentRound: 0, totalRounds: Math.min(10, Math.max(3, totalRounds||3)),
+      started: false, currentRound: 0,
+      totalRounds: Math.min(10, Math.max(3, totalRounds||3)),
       roundResults: [],
-      spawnInterval: null, coinInterval: null, laserInterval: null,
-      maxBalls: maxBalls||20,
-      spawnRate: spawnRate||10000,
-      roundStartTime: 0,
-      settings: settings || defaultSettings(),
+      waveInterval: null, coinInterval: null,
+      laserInterval: null, zoneInterval: null,
+      waveTimeout: null,
+      settings: merged,
+      currentWave: 0,
     };
     rooms[code].players[socket.id] = mkPlayer(socket.id, name, color, trail, emoji, level);
     socket.join(code);
@@ -133,6 +148,7 @@ io.on('connection', socket => {
     if (!room || room.host !== socket.id) return;
     room.started = true;
     room.currentRound = 0;
+    // Reset all abilities at game start
     Object.values(room.players).forEach(p => {
       p.totalXP = 0; p.totalCoins = 0; p.wins = 0;
       p.activeAbility = null; p.passives = []; p.ready = false;
@@ -144,7 +160,7 @@ io.on('connection', socket => {
     const room = rooms[code];
     if (!room || !room.players[socket.id]) return;
     const p = room.players[socket.id];
-    p.activeAbility = activeAbility;
+    p.activeAbility = activeAbility || null;
     p.passives = passives || [];
     p.ready = true;
     const total = Object.keys(room.players).length;
@@ -160,12 +176,6 @@ io.on('connection', socket => {
     const room = rooms[code];
     if (!room || room.host !== socket.id) return;
     io.to(code).emit('show_ability_select', { isFirstRound: false });
-  });
-
-  socket.on('player_input', ({ code, keys }) => {
-    const room = rooms[code];
-    if (!room || !room.players[socket.id]) return;
-    socket.to(code).emit('player_input_update', { id: socket.id, keys });
   });
 
   socket.on('player_pos', ({ code, x, y }) => {
@@ -186,18 +196,20 @@ io.on('connection', socket => {
     p.totalXP += p.xpThisRound;
     p.totalCoins += p.coinsThisRound;
     io.to(code).emit('player_died', { id: socket.id, name: p.name, time: survivalTime });
+
+    // Check if ALL players are dead
     const alive = Object.values(room.players).filter(p => p.alive);
-    if (alive.length === 0) { endRound(room); return; }
+    if (alive.length === 0) {
+      endRound(room);
+    }
+    // If only 1 left, they win the round
     if (alive.length === 1) {
       const winner = alive[0];
       winner.alive = false;
-      winner.survivalTime = (Date.now() - room.roundStartTime) / 1000;
+      winner.survivalTime = parseFloat(((Date.now() - room.roundStartTime) / 1000).toFixed(1));
       winner.xpThisRound = Math.floor(winner.survivalTime * 2);
       winner.wins = (winner.wins || 0) + 1;
-      // Winner keeps all coins undivided
-      winner.coinsThisRound = winner.coinsThisRound || 0;
       winner.totalXP += winner.xpThisRound;
-      winner.totalCoins += winner.coinsThisRound;
       io.to(code).emit('player_died', { id: winner.id, name: winner.name, time: winner.survivalTime, isWinner: true });
       endRound(room);
     }
@@ -214,8 +226,9 @@ io.on('connection', socket => {
   socket.on('restart_game', ({ code }) => {
     const room = rooms[code];
     if (!room || room.host !== socket.id) return;
-    clearIntervals(room);
+    clearAllIntervals(room);
     room.started = false; room.currentRound = 0; room.roundResults = [];
+    // Full reset of abilities
     Object.values(room.players).forEach(p => {
       p.totalXP=0; p.totalCoins=0; p.wins=0;
       p.activeAbility=null; p.passives=[]; p.ready=false;
@@ -241,22 +254,13 @@ io.on('connection', socket => {
   });
 });
 
-function defaultSettings() {
-  return {
-    lasersEnabled: true,
-    laserFrequency: 20000,
-    laserMaxSimultaneous: 2,
-    laserWarningDuration: 1500,
-    laserDiagonal: true,
-  };
-}
-
+// ══ WAVE SYSTEM ══
 function startRound(room) {
-  clearIntervals(room);
+  clearAllIntervals(room);
   room.currentRound++;
   room.roundStartTime = Date.now();
+  room.currentWave = 0;
   const seed = Math.floor(Math.random() * 999999);
-  let spawnCount = 0;
 
   Object.values(room.players).forEach(p => {
     p.alive = true; p.survivalTime = 0;
@@ -277,74 +281,159 @@ function startRound(room) {
 
   broadcastPublicRooms();
 
-  // Initial spawn
-  setTimeout(() => {
-    if (!rooms[room.code]?.started) return;
-    for (let i = 0; i < 3; i++) {
-      io.to(room.code).emit('spawn_signal');
-      spawnCount++;
-    }
-  }, 3500);
-
-  // Spawn interval
-  room.spawnInterval = setInterval(() => {
-    if (!rooms[room.code]?.started) return;
-    if (spawnCount >= room.maxBalls) return;
-    io.to(room.code).emit('spawn_signal');
-    spawnCount++;
-  }, room.spawnRate);
-
-  // Coins
+  // Coins interval — always active
   room.coinInterval = setInterval(() => {
     if (!rooms[room.code]?.started) return;
     io.to(room.code).emit('coin_spawn', {
       coinId: Math.random().toString(36).slice(2),
-      x: 60 + Math.random() * 680,
-      y: 60 + Math.random() * 480,
+      x: 80 + Math.random() * 640,
+      y: 80 + Math.random() * 440,
     });
   }, 7000);
 
-  // Lasers
+  // Start wave loop after countdown (3.5s)
+  setTimeout(() => {
+    if (!rooms[room.code]?.started) return;
+    runWave(room);
+  }, 3500);
+}
+
+function runWave(room) {
+  if (!rooms[room.code]?.started) return;
+  room.currentWave++;
   const s = room.settings;
-  if (s.lasersEnabled) {
-    let active = 0;
-    room.laserInterval = setInterval(() => {
+  const wave = ((room.currentWave - 1) % 3) + 1; // cycles 1→2→3→1→2→3
+
+  io.to(room.code).emit('wave_start', { wave, waveNumber: room.currentWave });
+
+  // Clear previous wave entities
+  io.to(room.code).emit('wave_clear');
+
+  // Wave 1: balls only
+  if (wave === 1) {
+    let spawned = 0;
+    // Initial burst
+    const burst = Math.min(3, s.maxBallsPerWave);
+    for (let i = 0; i < burst; i++) {
+      setTimeout(() => io.to(room.code).emit('spawn_signal'), i * 400);
+      spawned++;
+    }
+    room.waveInterval = setInterval(() => {
       if (!rooms[room.code]?.started) return;
-      if (active >= s.laserMaxSimultaneous) return;
-      const types = ['horizontal', 'vertical'];
-      if (s.laserDiagonal) types.push('diagonal45', 'diagonal135');
-      const type = types[Math.floor(Math.random() * types.length)];
-      const position = Math.floor(80 + Math.random() * 640);
-      active++;
-      io.to(room.code).emit('laser_warning', { type, position, duration: s.laserWarningDuration });
-      setTimeout(() => {
-        if (!rooms[room.code]?.started) return;
-        io.to(room.code).emit('laser_fire', { type, position });
-        setTimeout(() => { active = Math.max(0, active - 1); }, 600);
-      }, s.laserWarningDuration);
-    }, s.laserFrequency);
+      if (spawned >= s.maxBallsPerWave) return;
+      io.to(room.code).emit('spawn_signal');
+      spawned++;
+    }, s.ballSpawnRate);
   }
+
+  // Wave 2: zones only (balls cleared)
+  if (wave === 2 && s.zonesEnabled) {
+    spawnZoneWave(room);
+    room.zoneInterval = setInterval(() => {
+      if (!rooms[room.code]?.started) return;
+      spawnZoneWave(room);
+    }, s.zoneSpawnRate);
+  }
+
+  // Wave 3: everything
+  if (wave === 3) {
+    let spawned = 0;
+    const burst = Math.min(2, s.maxBallsPerWave);
+    for (let i = 0; i < burst; i++) {
+      setTimeout(() => io.to(room.code).emit('spawn_signal'), i * 600);
+      spawned++;
+    }
+    room.waveInterval = setInterval(() => {
+      if (!rooms[room.code]?.started) return;
+      if (spawned >= s.maxBallsPerWave) return;
+      io.to(room.code).emit('spawn_signal');
+      spawned++;
+    }, s.ballSpawnRate + 1000);
+    if (s.zonesEnabled) {
+      spawnZoneWave(room);
+      room.zoneInterval = setInterval(() => {
+        if (!rooms[room.code]?.started) return;
+        spawnZoneWave(room);
+      }, s.zoneSpawnRate + 2000);
+    }
+    if (s.lasersEnabled) {
+      startLasers(room);
+    }
+  }
+
+  // Schedule next wave
+  room.waveTimeout = setTimeout(() => {
+    if (!rooms[room.code]?.started) return;
+    clearInterval(room.waveInterval);
+    clearInterval(room.zoneInterval);
+    clearInterval(room.laserInterval);
+    // Brief reset pause
+    io.to(room.code).emit('wave_reset');
+    setTimeout(() => {
+      if (!rooms[room.code]?.started) return;
+      runWave(room);
+    }, s.waveResetDuration);
+  }, s.waveDuration);
+}
+
+function spawnZoneWave(room) {
+  const types = ['poison', 'fire', 'blackhole', 'electricwall'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const zoneId = Math.random().toString(36).slice(2);
+  let data = { zoneId, type };
+
+  if (type === 'poison' || type === 'fire' || type === 'blackhole') {
+    data.x = 100 + Math.random() * 600;
+    data.y = 100 + Math.random() * 400;
+    data.r = type === 'blackhole' ? 40 : (60 + Math.random() * 60);
+  } else if (type === 'electricwall') {
+    data.isHorizontal = Math.random() > 0.5;
+    data.startEdge = Math.random() > 0.5 ? 0 : 1; // 0=top/left, 1=bottom/right
+    data.speed = 40 + Math.random() * 40; // px/sec
+  }
+
+  const duration = 20000 + Math.random() * 10000;
+  data.duration = duration;
+
+  io.to(room.code).emit('zone_spawn', data);
+  setTimeout(() => {
+    if (!rooms[room.code]?.started) return;
+    io.to(room.code).emit('zone_expire', { zoneId });
+  }, duration);
+}
+
+function startLasers(room) {
+  const s = room.settings;
+  let active = 0;
+  room.laserInterval = setInterval(() => {
+    if (!rooms[room.code]?.started) return;
+    if (active >= s.laserMaxSimultaneous) return;
+    const types = ['horizontal', 'vertical'];
+    if (s.laserDiagonal) types.push('diagonal45', 'diagonal135');
+    const type = types[Math.floor(Math.random() * types.length)];
+    const position = Math.floor(80 + Math.random() * 640);
+    active++;
+    io.to(room.code).emit('laser_warning', { type, position, duration: s.laserWarningDuration });
+    setTimeout(() => {
+      if (!rooms[room.code]?.started) return;
+      io.to(room.code).emit('laser_fire', { type, position });
+      setTimeout(() => { active = Math.max(0, active - 1); }, 600);
+    }, s.laserWarningDuration);
+  }, s.laserFrequency);
 }
 
 function endRound(room) {
-  clearIntervals(room);
+  clearAllIntervals(room);
   const playerCount = Object.keys(room.players).length;
 
-  // Coin dividers based on rank
-  const dividers = [];
-  for (let i = 0; i < playerCount; i++) {
-    if (i === 0) dividers.push(1);
-    else dividers.push(1 + i * 0.5);
-  }
-
+  // Coin dividers by rank
   const sorted = Object.values(room.players)
     .sort((a, b) => b.survivalTime - a.survivalTime);
 
   sorted.forEach((p, i) => {
-    if (i > 0) { // winner keeps all
-      p.coinsThisRound = Math.floor(p.coinsThisRound / dividers[i]);
-      p.totalCoins = (p.totalCoins || 0) - (p.coinsThisRound * dividers[i] - p.coinsThisRound);
-    }
+    if (i === 0) return; // winner keeps all
+    const div = 1 + i * 0.5;
+    p.coinsThisRound = Math.floor(p.coinsThisRound / div);
   });
 
   const results = sorted.map(p => ({
@@ -353,8 +442,6 @@ function endRound(room) {
     xp: p.xpThisRound || 0,
     coins: p.coinsThisRound || 0,
     wins: p.wins || 0,
-    activeAbility: p.activeAbility,
-    passives: p.passives || [],
   }));
 
   room.roundResults.push(results);
@@ -367,11 +454,14 @@ function endRound(room) {
 
   if (isLastRound) {
     const finals = Object.values(room.players)
-      .map(p => ({ id:p.id, name:p.name, color:p.color, emoji:p.emoji,
-        wins:p.wins||0, totalXP:p.totalXP||0, totalCoins:p.totalCoins||0 }))
+      .map(p => ({
+        id: p.id, name: p.name, color: p.color, emoji: p.emoji,
+        wins: p.wins||0, totalXP: p.totalXP||0, totalCoins: p.totalCoins||0,
+      }))
       .sort((a,b) => b.wins - a.wins || b.totalXP - a.totalXP);
     setTimeout(() => io.to(room.code).emit('game_over', { results: finals }), 4000);
   }
 }
 
-server.listen(process.env.PORT || 3000, () => console.log('Server running on port', process.env.PORT || 3000));
+server.listen(process.env.PORT || 3000, () =>
+  console.log('Ball Arena v4.1 running on port', process.env.PORT || 3000));
