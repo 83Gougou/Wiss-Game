@@ -1046,7 +1046,7 @@ function renderCosmGrid(elId,items,getId,getIcon){
 function buildAbilityScreen(isFirst){
   clearInterval(abTimerInterval);abConfirmed=false;
   abPendingActive=myActive;abPendingPassives=[...myPassives];
-  let abCoins=shopCoins;
+  let abCoins=sessionCoins;
   document.getElementById('ab-title').textContent=isFirst?'CAPACITÉS DE DÉPART':'SHOP & CAPACITÉS';
   document.getElementById('ab-sub').textContent=isFirst?'Achète des capacités pour commencer':'Dépense tes pièces et gère tes capacités';
   document.getElementById('ab-coins-val').textContent=abCoins;
@@ -1095,6 +1095,7 @@ document.getElementById('ab-confirm-btn').addEventListener('click',confirmAbilit
 function confirmAbility(){
   if(abConfirmed)return;abConfirmed=true;clearInterval(abTimerInterval);
   myActive=abPendingActive;myPassives=[...abPendingPassives];
+  sessionCoins=parseInt(document.getElementById('ab-coins-val').textContent)||0;
   document.getElementById('ab-confirm-btn').disabled=true;document.getElementById('ab-confirm-btn').textContent='✅ En attente...';
   socket.emit('ability_ready',{code:myCode,activeAbility:myActive,passives:myPassives});
 }
@@ -1226,7 +1227,7 @@ socket.on('recv_active',({id,ability})=>{
 socket.on('round_over',({results,round,totalRounds:tr,isLastRound})=>{
   gameRunning=false;
   // Tout le monde garde toutes ses pièces — pas de diviseur
-  shopCoins=results.find(r=>r.id===myId)?.coins||0;
+  sessionCoins += results.find(r=>r.id===myId)?.coins||0;
   document.getElementById('ro-label').textContent=`MANCHE ${round} / ${tr}`;
   const box=document.getElementById('ro-scores');box.innerHTML='';
   results.forEach((s,i)=>{const isMe=s.id===myId;const row=document.createElement('div');row.className='sc-row';
