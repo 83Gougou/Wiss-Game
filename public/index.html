@@ -704,7 +704,7 @@ function myDie(){
   let xp=Math.floor(t*2);if(myPassives.includes('prestige'))xp=Math.floor(xp*1.5);
   gainXP(xp);prof.totalGames++;prof.totalTime+=t;if(t>prof.bestTime)prof.bestTime=t;saveProf();
   document.getElementById('death-overlay').style.display='flex';
-  socket.emit('i_died',{code:myCode,survivalTime:t,coinsThisRound:sessionCoins});
+  socket.emit('i_died',{code:myCode,survivalTime:t,coinsThisRound:0});
   updateHUDXP();
   if(myPassives.includes('kamikaze')){flickerCreatures=true;flickerEnd=Date.now()+1000;flickerSpeedUp=true;}
 }
@@ -1227,7 +1227,8 @@ socket.on('recv_active',({id,ability})=>{
 socket.on('round_over',({results,round,totalRounds:tr,isLastRound})=>{
   gameRunning=false;
   // Tout le monde garde toutes ses pièces — pas de diviseur
-  sessionCoins += results.find(r=>r.id===myId)?.coins||0;
+  const earned = results.find(r=>r.id===myId)?.coins||0;
+  sessionCoins = sessionCoins + earned;
   document.getElementById('ro-label').textContent=`MANCHE ${round} / ${tr}`;
   const box=document.getElementById('ro-scores');box.innerHTML='';
   results.forEach((s,i)=>{const isMe=s.id===myId;const row=document.createElement('div');row.className='sc-row';
