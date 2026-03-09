@@ -49,7 +49,6 @@ function clearAllIntervals(room) {
   clearInterval(room.coinInterval);
   clearInterval(room.laserInterval);
   clearTimeout(room.graceTimeout);
-  // Per-zone intervals
   for (const key of Object.keys(room)) {
     if (key.startsWith('zoneInterval_')) clearInterval(room[key]);
   }
@@ -97,19 +96,15 @@ function mkPlayer(id, name, color, trail, emoji, level) {
 
 function defaultSettings() {
   return {
-    // Balls
     ballSpawnRate: 2000,
-    ballLifespan: 20000,   // null = infinite
     maxBallsPerWave: 8,
-    // Lasers
+    mobsEnabled: true,
     lasersEnabled: true,
-    laserFrequency: 12000,
+    laserFrequency: 8000,
     laserMaxSimultaneous: 2,
     laserWarningDuration: 1800,
     laserDiagonal: true,
-    // Zones global toggle
     zonesEnabled: true,
-    // Per-zone settings
     zones: {
       blackhole: {
         enabled: true,
@@ -133,10 +128,8 @@ io.on('connection', socket => {
   socket.on('create_room', ({ name, color, trail, emoji, level, isPrivate, totalRounds, settings }) => {
     for (const c in rooms) if (rooms[c].players[socket.id]) leaveRoom(socket, c);
     const code = genCode();
-    // Deep merge settings with defaults
     const def = defaultSettings();
     const merged = Object.assign({}, def, settings || {});
-    // Merge nested zones
     if (settings?.zones) {
       merged.zones = {};
       for (const zType of ['blackhole', 'electricwall']) {
@@ -150,9 +143,11 @@ io.on('connection', socket => {
       totalRounds: Math.min(10, Math.max(3, totalRounds||3)),
       roundResults: [],
       spawnInterval: null, coinInterval: null, laserInterval: null,
+      graceTimeout: null,
       roundStartTime: 0,
       settings: merged,
       ballCount: 0,
+      activeCoins: 0,
     };
     rooms[code].players[socket.id] = mkPlayer(socket.id, name, color, trail, emoji, level);
     socket.join(code);
@@ -210,10 +205,10 @@ io.on('connection', socket => {
     io.to(code).emit('show_ability_select', { isFirstRound: false });
   });
 
-  socket.on('player_pos', ({ code, x, y }) => {
+  socket.on('player_pos', ({ code, x, y, emoji }) => {
     const room = rooms[code];
     if (!room || !room.players[socket.id]) return;
-    socket.to(code).emit('player_moved', { id: socket.id, x, y });
+    socket.to(code).emit('player_moved', { id: socket.id, x, y, emoji });
   });
 
   socket.on('i_died', ({ code, survivalTime, coinsThisRound }) => {
@@ -234,9 +229,10 @@ io.on('connection', socket => {
     if (alive.length === 0) {
       endRound(room);
     } else if (alive.length === 1) {
-      // Last survivor: 25s grace period to collect coins, then end
       const winner = alive[0];
-      io.to(code).emit('last_player_standing', { id: winner.id, name: winner.name, graceSeconds: 15 });
+      io.to(code).emit('last_player_standing', {
+        id: winner.id, name: winner.name, graceSeconds: 25
+      });
       clearTimeout(room.graceTimeout);
       room.graceTimeout = setTimeout(() => {
         if (!rooms[code]?.started) return;
@@ -247,18 +243,15 @@ io.on('connection', socket => {
         winner.totalXP += winner.xpThisRound;
         io.to(code).emit('player_died', { id: winner.id, name: winner.name, time: winner.survivalTime, isWinner: true });
         endRound(room);
-      }, 15000);
+      }, 25000);
     }
   });
 
-  // Winner sends final coins when grace period ends (or they can send earlier)
   socket.on('grace_done', ({ code, coinsThisRound }) => {
     const room = rooms[code];
     if (!room || !room.players[socket.id]) return;
     const p = room.players[socket.id];
     p.coinsThisRound = coinsThisRound || p.coinsThisRound;
-    p.totalCoins = (p.totalCoins || 0);
-    // Force end now
     clearTimeout(room.graceTimeout);
     p.alive = false;
     p.survivalTime = parseFloat(((Date.now() - room.roundStartTime) / 1000).toFixed(1));
@@ -284,6 +277,7 @@ io.on('connection', socket => {
     if (!room || room.host !== socket.id) return;
     clearAllIntervals(room);
     room.started = false; room.currentRound = 0; room.roundResults = [];
+    room.ballCount = 0; room.activeCoins = 0;
     Object.values(room.players).forEach(p => {
       p.totalXP=0; p.totalCoins=0; p.wins=0;
       p.activeAbility=null; p.passives=[]; p.ready=false;
@@ -309,12 +303,13 @@ io.on('connection', socket => {
   });
 });
 
-// ══ ROUND ══
+// ── ROUND ──
 function startRound(room) {
   clearAllIntervals(room);
   room.currentRound++;
   room.roundStartTime = Date.now();
   room.ballCount = 0;
+  room.activeCoins = 0;
   const seed = Math.floor(Math.random() * 999999);
   const s = room.settings;
 
@@ -337,32 +332,27 @@ function startRound(room) {
 
   broadcastPublicRooms();
 
-  // ── Balls: continuous spawn after countdown ──
-  setTimeout(() => {
-    if (!rooms[room.code]?.started) return;
-    // Initial burst of 3
-    for (let i = 0; i < 3; i++) {
-      setTimeout(() => {
+  // Balls: spawn after countdown (3.5s), initial burst then continuous
+  if (s.mobsEnabled !== false) {
+    setTimeout(() => {
+      if (!rooms[room.code]?.started) return;
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          if (!rooms[room.code]?.started) return;
+          io.to(room.code).emit('spawn_signal');
+          room.ballCount++;
+        }, i * 600);
+      }
+      room.spawnInterval = setInterval(() => {
         if (!rooms[room.code]?.started) return;
+        if (room.ballCount >= s.maxBallsPerWave) return;
         io.to(room.code).emit('spawn_signal');
         room.ballCount++;
-      }, i * 500);
-    }
-    // Ongoing spawn
-    room.spawnInterval = setInterval(() => {
-      if (!rooms[room.code]?.started) return;
-      if (room.ballCount >= s.maxBallsPerWave) return;
-      io.to(room.code).emit('spawn_signal');
-      room.ballCount++;
-      // If lifespan set, decrement count after lifespan so new ones can spawn
-      if (s.ballLifespan) {
-        setTimeout(() => { room.ballCount = Math.max(0, room.ballCount - 1); }, s.ballLifespan);
-      }
-    }, s.ballSpawnRate);
-  }, 3500);
+      }, s.ballSpawnRate);
+    }, 3500);
+  }
 
-  // ── Coins: max 5 at once, no expiry ──
-  room.activeCoins = 0;
+  // Coins: max 5 simultanées, pas d'expiration
   room.coinInterval = setInterval(() => {
     if (!rooms[room.code]?.started) return;
     if (room.activeCoins >= 5) return;
@@ -374,7 +364,7 @@ function startRound(room) {
     });
   }, 5000);
 
-  // ── Lasers ──
+  // Lasers
   if (s.lasersEnabled) {
     let active = 0;
     room.laserInterval = setInterval(() => {
@@ -394,14 +384,12 @@ function startRound(room) {
     }, s.laserFrequency);
   }
 
-  // ── Zones: each type has its own independent interval ──
+  // Zones
   if (s.zonesEnabled) {
-    const zTypes = ['blackhole', 'electricwall'];
-    zTypes.forEach(zType => {
+    const stagger = { blackhole: 12000, electricwall: 16000 };
+    ['blackhole', 'electricwall'].forEach(zType => {
       const zc = s.zones?.[zType];
       if (!zc?.enabled) return;
-      // Initial delay: stagger zone types so they don't all appear at once
-      const stagger = { poison: 5000, fire: 8000, blackhole: 12000, electricwall: 16000 };
       setTimeout(() => {
         if (!rooms[room.code]?.started) return;
         spawnZone(room, zType);
@@ -414,7 +402,6 @@ function startRound(room) {
   }
 }
 
-// ── Spawn a single zone ──
 function spawnZone(room, type) {
   if (!rooms[room.code]?.started) return;
   const s = room.settings;
@@ -428,7 +415,7 @@ function spawnZone(room, type) {
     data.x = 150 + Math.random() * 500;
     data.y = 150 + Math.random() * 300;
     data.r = 40;
-    data.force = zc.force || 60;
+    data.force = zc.force || 120;
     data.range = zc.range || 200;
     data.duration = zc.duration || 18000;
   } else if (type === 'electricwall') {
@@ -436,17 +423,14 @@ function spawnZone(room, type) {
     data.startEdge = Math.random() > 0.5 ? 0 : 1;
     data.speed = zc.speed || 60;
     data.gap = zc.gap || 90;
-    // gapCenter: random position along the wall axis, avoid edges
     const axis = data.isHorizontal ? 800 : 600;
     data.gapCenter = axis * 0.2 + Math.random() * axis * 0.6;
-    // Duration: time for wall to fully cross the arena
     const arenaSize = data.isHorizontal ? 600 : 800;
     data.duration = Math.ceil((arenaSize + 30) / data.speed * 1000) + 500;
   }
 
   io.to(room.code).emit('zone_spawn', data);
 
-  // Auto-expire
   if (data.duration) {
     setTimeout(() => {
       if (!rooms[room.code]?.started) return;
@@ -458,7 +442,7 @@ function spawnZone(room, type) {
 function endRound(room) {
   clearAllIntervals(room);
 
-  // Everyone keeps all their coins — no divider
+  // Tout le monde garde toutes ses pièces — pas de diviseur par rang
   const sorted = Object.values(room.players)
     .sort((a, b) => b.survivalTime - a.survivalTime);
 
@@ -490,4 +474,4 @@ function endRound(room) {
 }
 
 server.listen(process.env.PORT || 3000, () =>
-  console.log('Ball Arena v4.2 running on port', process.env.PORT || 3000));
+  console.log('Ball Arena v4.3 running on port', process.env.PORT || 3000));
