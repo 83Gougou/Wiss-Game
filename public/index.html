@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日本語 - Apprendre Hiragana & Katakana</title>
+  <title>日本語 - Apprendre</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -21,6 +22,8 @@
       --text: #0f172a;
       --text-light: #475569;
       --bg: #ffffff;
+      --success: #10b981;
+      --error: #ef4444;
     }
 
     html, body {
@@ -111,38 +114,62 @@
       align-items: center;
       justify-content: center;
       min-height: 100%;
-      gap: 40px;
+      gap: 50px;
     }
 
-    .quiz-stats {
+    .quiz-header {
       display: flex;
-      gap: 60px;
-      margin-bottom: 20px;
+      gap: 80px;
+      align-items: center;
     }
 
-    .stat {
+    .streak-display {
       text-align: center;
     }
 
-    .stat-label {
+    .streak-number {
+      font-size: 56px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .flame {
+      font-size: 48px;
+      animation: flameFlicker 0.6s infinite;
+    }
+
+    @keyframes flameFlicker {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .timer-display {
+      text-align: center;
+    }
+
+    .timer-label {
       font-size: 12px;
       color: var(--text-light);
       text-transform: uppercase;
+      margin-bottom: 10px;
       letter-spacing: 0.5px;
-      margin-bottom: 8px;
       font-weight: 600;
     }
 
-    .stat-value {
-      font-size: 42px;
+    .timer-countdown {
+      font-size: 48px;
       font-weight: 700;
       color: var(--primary);
+      font-variant-numeric: tabular-nums;
     }
 
     .mode-toggle {
       display: flex;
       gap: 10px;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
 
     .mode-btn {
@@ -164,89 +191,166 @@
       color: white;
     }
 
-    .mode-btn:hover:not(.active) {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    .timer-bar {
-      width: 300px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      margin: 20px 0;
-    }
-
-    .timer-fill {
-      height: 100%;
-      background: var(--primary);
-      animation: timerAnim 5s linear forwards;
-    }
-
-    @keyframes timerAnim {
-      to { width: 0; }
-    }
-
     .character {
       font-size: 140px;
       font-weight: 700;
       color: var(--dark);
-      margin: 30px 0;
       line-height: 1;
     }
 
     .answers {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
       width: 100%;
-      max-width: 600px;
+      max-width: 700px;
     }
 
     .answer-btn {
-      padding: 16px;
+      padding: 20px;
       border: 2px solid var(--border);
       background: var(--bg);
       color: var(--text);
       cursor: pointer;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       transition: all 0.2s;
       font-family: inherit;
     }
 
-    .answer-btn:hover {
+    .answer-btn:hover:not(:disabled) {
       border-color: var(--primary);
       color: var(--primary);
       background: #dbeafe;
     }
 
     .answer-btn.correct {
-      border-color: #10b981;
+      border-color: var(--success);
       background: #d1fae5;
-      color: #059669;
+      color: var(--success);
     }
 
     .answer-btn.wrong {
-      border-color: #ef4444;
+      border-color: var(--error);
       background: #fee2e2;
-      color: #dc2626;
+      color: var(--error);
     }
 
     .answer-btn:disabled {
       cursor: not-allowed;
-      opacity: 0.6;
+    }
+
+    /* OVERLAY */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(239, 68, 68, 0.2);
+      display: none;
+      pointer-events: none;
+      animation: overlayFlash 0.6s ease-out;
+      z-index: 100;
+    }
+
+    .overlay.show {
+      display: block;
+    }
+
+    @keyframes overlayFlash {
+      from { background: rgba(239, 68, 68, 0.4); }
+      to { background: rgba(239, 68, 68, 0); }
+    }
+
+    /* USERS/FRIENDS LIST */
+    .users-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .user-card {
+      background: var(--light);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .user-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    }
+
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: white;
+      font-weight: 700;
+      margin: 0 auto 15px;
+    }
+
+    .user-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .user-stats {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 15px;
+    }
+
+    .user-stat-line {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 8px;
+    }
+
+    .user-action-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .user-action-btn:hover {
+      opacity: 0.9;
+    }
+
+    .user-action-btn.friend {
+      background: var(--success);
+    }
+
+    .user-action-btn.added {
+      background: var(--text-light);
+      cursor: default;
     }
 
     /* PROFILE PAGE */
     .profile-card {
       background: var(--light);
       border: 1px solid var(--border);
-      padding: 30px;
+      padding: 40px;
       border-radius: 12px;
-      margin-bottom: 30px;
+      max-width: 600px;
     }
 
     .profile-header {
@@ -258,18 +362,18 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .avatar {
-      width: 90px;
-      height: 90px;
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
       background: var(--primary);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 40px;
+      font-size: 48px;
       color: white;
-      flex-shrink: 0;
       font-weight: 700;
+      flex-shrink: 0;
     }
 
     .profile-info h2 {
@@ -285,7 +389,7 @@
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
 
@@ -345,86 +449,6 @@
       color: var(--text-light);
     }
 
-    /* FRIENDS PAGE */
-    .friends-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 20px;
-    }
-
-    .friend-card {
-      background: var(--light);
-      border: 1px solid var(--border);
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      transition: all 0.2s;
-    }
-
-    .friend-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-    }
-
-    .friend-card.empty {
-      grid-column: 1/-1;
-      padding: 60px 20px;
-      text-align: center;
-      color: var(--text-light);
-    }
-
-    .friend-name {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 15px;
-      color: var(--text);
-    }
-
-    .friend-stat {
-      display: flex;
-      justify-content: space-around;
-      font-size: 13px;
-      margin-bottom: 15px;
-    }
-
-    .friend-stat-item {
-      text-align: center;
-    }
-
-    .friend-stat-value {
-      font-weight: 700;
-      color: var(--primary);
-      font-size: 16px;
-    }
-
-    .friend-stat-label {
-      font-size: 11px;
-      color: var(--text-light);
-    }
-
-    .add-friend-btn {
-      width: 100%;
-      padding: 10px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-
-    .add-friend-btn:hover {
-      opacity: 0.9;
-    }
-
-    .add-friend-btn.added {
-      background: #10b981;
-    }
-
-    /* SECTION TITLES */
     h2 {
       font-size: 28px;
       margin-bottom: 30px;
@@ -440,7 +464,6 @@
       font-weight: 600;
     }
 
-    /* SCROLLBAR */
     ::-webkit-scrollbar {
       width: 8px;
     }
@@ -458,7 +481,6 @@
       background: var(--primary);
     }
 
-    /* RESPONSIVE */
     @media (max-width: 768px) {
       .container {
         grid-template-columns: 1fr;
@@ -482,6 +504,10 @@
         padding: 20px;
       }
 
+      .quiz-header {
+        gap: 30px;
+      }
+
       .character {
         font-size: 80px;
       }
@@ -490,16 +516,7 @@
         grid-template-columns: 1fr;
       }
 
-      .quiz-stats {
-        gap: 30px;
-      }
-
-      .profile-header {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .friends-container {
+      .users-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -512,33 +529,32 @@
       <div class="logo">日本語</div>
       <div class="nav-item active" data-page="quiz">🎮 Quiz</div>
       <div class="nav-item" data-page="reference">📖 Caractères</div>
+      <div class="nav-item" data-page="online">👥 Gens en ligne</div>
+      <div class="nav-item" data-page="friends">💬 Mes Amis</div>
       <div class="nav-item" data-page="profile">👤 Profile</div>
-      <div class="nav-item" data-page="friends">👥 Amis</div>
     </div>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN -->
     <div class="main">
       <!-- QUIZ PAGE -->
       <div id="quiz" class="page active">
         <div class="quiz-wrapper">
-          <div class="quiz-stats">
-            <div class="stat">
-              <div class="stat-label">Streak</div>
-              <div class="stat-value" id="streak">0</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label">EXP</div>
-              <div class="stat-value" id="exp-display">0</div>
-            </div>
-          </div>
-
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="hiragana">Hiragana</button>
             <button class="mode-btn" data-mode="katakana">Katakana</button>
           </div>
 
-          <div class="timer-bar">
-            <div class="timer-fill" id="timerFill"></div>
+          <div class="quiz-header">
+            <div class="streak-display">
+              <div class="streak-number">
+                <span id="streak">0</span>
+                <span class="flame">🔥</span>
+              </div>
+            </div>
+            <div class="timer-display">
+              <div class="timer-label">Temps</div>
+              <div class="timer-countdown" id="countdown">5</div>
+            </div>
           </div>
 
           <div class="character" id="character">あ</div>
@@ -556,15 +572,27 @@
         <div class="reference-grid" id="katakanaGrid"></div>
       </div>
 
+      <!-- ONLINE USERS PAGE -->
+      <div id="online" class="page">
+        <h2>Gens en ligne</h2>
+        <div class="users-grid" id="onlineGrid"></div>
+      </div>
+
+      <!-- FRIENDS PAGE -->
+      <div id="friends" class="page">
+        <h2>Mes Amis</h2>
+        <div class="users-grid" id="friendsGrid"></div>
+      </div>
+
       <!-- PROFILE PAGE -->
       <div id="profile" class="page">
+        <h2>Mon Profile</h2>
         <div class="profile-card">
           <div class="profile-header">
-            <div class="avatar" id="profileAvatar">あ</div>
+            <div class="profile-avatar" id="profileAvatar">A</div>
             <div class="profile-info">
-              <h2 id="profileName">User</h2>
-              <p id="profileJoined">Inscrit le...</p>
-              <p>Amis: <span id="friendsCount">0</span></p>
+              <h2 id="profileName">Utilisateur</h2>
+              <p id="friendsCount">Amis: 0</p>
             </div>
           </div>
 
@@ -589,14 +617,10 @@
           </div>
         </div>
       </div>
-
-      <!-- FRIENDS PAGE -->
-      <div id="friends" class="page">
-        <h2>Mes Amis</h2>
-        <div class="friends-container" id="friendsList"></div>
-      </div>
     </div>
   </div>
+
+  <div class="overlay" id="overlay"></div>
 
   <script>
     // DATA
@@ -645,21 +669,61 @@
       exp: 0,
       totalQuestions: 0,
       username: 'User' + Math.floor(Math.random() * 10000),
+      userId: null,
       friends: [],
-      joinedDate: new Date().toLocaleDateString('fr-FR'),
+      onlineUsers: [],
       currentChar: null,
       correctAnswer: null,
-      timerActive: false
+      timerInterval: null,
+      currentTimer: 5
     };
 
-    // LOAD STATE
+    // SOCKET
+    const socket = io();
+
+    socket.on('connect', () => {
+      state.userId = localStorage.getItem('userId');
+      socket.emit('user_join', state.username, { userId: state.userId });
+    });
+
+    socket.on('user_id', (userId) => {
+      state.userId = userId;
+      localStorage.setItem('userId', userId);
+    });
+
+    socket.on('online_users', (users) => {
+      state.onlineUsers = users;
+      if (document.querySelector('#online.page.active')) {
+        renderOnlineUsers();
+      }
+    });
+
+    // LOAD & SAVE
     function loadState() {
       const saved = localStorage.getItem('japaneseState');
-      if (saved) Object.assign(state, JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.assign(state, parsed);
+      }
     }
 
     function saveState() {
-      localStorage.setItem('japaneseState', JSON.stringify(state));
+      localStorage.setItem('japaneseState', JSON.stringify({
+        maxStreakHira: state.maxStreakHira,
+        maxStreakKata: state.maxStreakKata,
+        exp: state.exp,
+        totalQuestions: state.totalQuestions,
+        username: state.username
+      }));
+
+      if (state.userId) {
+        socket.emit('update_stats', state.userId, {
+          maxStreakHira: state.maxStreakHira,
+          maxStreakKata: state.maxStreakKata,
+          exp: state.exp,
+          totalQuestions: state.totalQuestions
+        });
+      }
     }
 
     loadState();
@@ -668,14 +732,14 @@
     function init() {
       renderReference();
       updateProfile();
-      renderFriends();
       setupNav();
       setupModes();
       newQuestion();
     }
 
-    // QUIZ LOGIC
+    // QUIZ
     function newQuestion() {
+      clearTimeout(state.timerInterval);
       const data = state.mode === 'hiragana' ? hiraganaData : katakanaData;
       const item = data[Math.floor(Math.random() * data.length)];
       state.currentChar = item.char;
@@ -683,7 +747,6 @@
 
       document.getElementById('character').textContent = state.currentChar;
 
-      // Get 3 answers
       const wrong = data
         .filter(x => x.romaji !== state.correctAnswer)
         .sort(() => Math.random() - 0.5)
@@ -692,7 +755,6 @@
 
       const answers = [state.correctAnswer, ...wrong].sort(() => Math.random() - 0.5);
 
-      // Render buttons
       const container = document.getElementById('answers');
       container.innerHTML = '';
       answers.forEach(ans => {
@@ -706,8 +768,27 @@
       startTimer();
     }
 
+    function startTimer() {
+      state.currentTimer = 5;
+      updateTimerDisplay();
+
+      state.timerInterval = setInterval(() => {
+        state.currentTimer--;
+        updateTimerDisplay();
+
+        if (state.currentTimer <= 0) {
+          clearInterval(state.timerInterval);
+          timeoutAnswer();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById('countdown').textContent = Math.max(0, state.currentTimer);
+    }
+
     function checkAnswer(answer, btn) {
-      state.timerActive = false;
+      clearInterval(state.timerInterval);
       document.querySelectorAll('.answer-btn').forEach(b => b.disabled = true);
 
       const isCorrect = answer === state.correctAnswer;
@@ -725,6 +806,7 @@
       } else {
         btn.classList.add('wrong');
         document.querySelector('.answer-btn').classList.add('correct');
+        showOverlay();
         state.streak = 0;
         state.totalQuestions++;
       }
@@ -732,34 +814,31 @@
       updateStats();
       saveState();
 
-      setTimeout(() => newQuestion(), 1500);
+      setTimeout(() => newQuestion(), isCorrect ? 600 : 1000);
     }
 
-    function startTimer() {
-      state.timerActive = true;
-      const fill = document.getElementById('timerFill');
-      fill.style.animation = 'none';
-      setTimeout(() => {
-        fill.style.animation = 'timerAnim 5s linear forwards';
-      }, 10);
+    function timeoutAnswer() {
+      const buttons = document.querySelectorAll('.answer-btn');
+      buttons.forEach(b => {
+        b.disabled = true;
+        if (b.textContent === state.correctAnswer) {
+          b.classList.add('correct');
+        } else {
+          b.classList.add('wrong');
+        }
+      });
+      showOverlay();
+      state.streak = 0;
+      state.totalQuestions++;
+      updateStats();
+      saveState();
+      setTimeout(() => newQuestion(), 1000);
+    }
 
-      setTimeout(() => {
-        if (!state.timerActive) return;
-        const buttons = document.querySelectorAll('.answer-btn');
-        buttons.forEach(b => b.disabled = true);
-        buttons.forEach(b => {
-          if (b.textContent === state.correctAnswer) {
-            b.classList.add('correct');
-          } else {
-            b.classList.add('wrong');
-          }
-        });
-        state.streak = 0;
-        state.totalQuestions++;
-        updateStats();
-        saveState();
-        setTimeout(() => newQuestion(), 1500);
-      }, 5000);
+    function showOverlay() {
+      const overlay = document.getElementById('overlay');
+      overlay.classList.add('show');
+      setTimeout(() => overlay.classList.remove('show'), 600);
     }
 
     // REFERENCE
@@ -773,12 +852,66 @@
       ).join('');
     }
 
+    // ONLINE USERS
+    function renderOnlineUsers() {
+      const grid = document.getElementById('onlineGrid');
+      grid.innerHTML = state.onlineUsers.map(user => `
+        <div class="user-card">
+          <div class="user-avatar">${user.username[0]}</div>
+          <div class="user-name">${user.username}</div>
+          <div class="user-stats">
+            <div class="user-stat-line">
+              <span>Streak: ${user.maxStreak}</span>
+              <span>EXP: ${user.exp}</span>
+            </div>
+          </div>
+          <button class="user-action-btn ${state.friends.find(f => f.id === user.id) ? 'added' : ''}" 
+                  onclick="addFriend('${user.id}', '${user.username}', ${user.maxStreak}, ${user.exp})"
+                  ${state.friends.find(f => f.id === user.id) ? 'disabled' : ''}>
+            ${state.friends.find(f => f.id === user.id) ? '✓ Ami' : 'Ajouter'}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // FRIENDS
+    function renderFriends() {
+      const grid = document.getElementById('friendsGrid');
+      if (state.friends.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text-light);">Pas d\'amis pour le moment<br>Ajoute des amis depuis "Gens en ligne"!</div>';
+        return;
+      }
+
+      grid.innerHTML = state.friends.map(friend => `
+        <div class="user-card">
+          <div class="user-avatar">${friend.username[0]}</div>
+          <div class="user-name">${friend.username}</div>
+          <div class="user-stats">
+            <div class="user-stat-line">
+              <span>Streak: ${friend.maxStreak}</span>
+              <span>EXP: ${friend.exp}</span>
+            </div>
+          </div>
+          <button class="user-action-btn friend">👤 Profile</button>
+        </div>
+      `).join('');
+    }
+
+    function addFriend(userId, username, maxStreak, exp) {
+      if (!state.friends.find(f => f.id === userId)) {
+        state.friends.push({ id: userId, username, maxStreak, exp });
+        socket.emit('add_friend', state.userId, userId);
+        saveState();
+        renderOnlineUsers();
+        renderFriends();
+      }
+    }
+
     // PROFILE
     function updateProfile() {
       document.getElementById('profileName').textContent = state.username;
-      document.getElementById('profileJoined').textContent = `Inscrit le ${state.joinedDate}`;
       document.getElementById('profileAvatar').textContent = state.username[0];
-      document.getElementById('friendsCount').textContent = state.friends.length;
+      document.getElementById('friendsCount').textContent = `Amis: ${state.friends.length}`;
       document.getElementById('maxHira').textContent = state.maxStreakHira;
       document.getElementById('maxKata').textContent = state.maxStreakKata;
       document.getElementById('totalExp').textContent = state.exp;
@@ -787,49 +920,10 @@
 
     function updateStats() {
       document.getElementById('streak').textContent = state.streak;
-      document.getElementById('exp-display').textContent = state.exp;
       updateProfile();
     }
 
-    // FRIENDS
-    function renderFriends() {
-      const container = document.getElementById('friendsList');
-      
-      if (state.friends.length === 0) {
-        container.innerHTML = '<div class="friend-card empty">Pas encore d\'amis<br><br>Ajoute des amis depuis la liste en bas!</div>';
-        return;
-      }
-
-      container.innerHTML = state.friends.map(friend => `
-        <div class="friend-card">
-          <div class="friend-name">${friend.name}</div>
-          <div class="friend-stat">
-            <div class="friend-stat-item">
-              <div class="friend-stat-value">${friend.maxStreak}</div>
-              <div class="friend-stat-label">Streak</div>
-            </div>
-            <div class="friend-stat-item">
-              <div class="friend-stat-value">${friend.exp}</div>
-              <div class="friend-stat-label">EXP</div>
-            </div>
-          </div>
-          <button class="add-friend-btn added" disabled>Ami ✓</button>
-        </div>
-      `).join('');
-    }
-
-    // MOCK FRIENDS TO ADD
-    function getMockFriends() {
-      return [
-        { name: 'Sakura_2024', maxStreak: 45, exp: 3500 },
-        { name: 'Ninja_Master', maxStreak: 78, exp: 5200 },
-        { name: 'Zen_Student', maxStreak: 32, exp: 2100 },
-        { name: 'Kanji_Warrior', maxStreak: 91, exp: 6800 },
-        { name: 'Ramen_Fan', maxStreak: 28, exp: 1800 }
-      ].filter(f => !state.friends.find(x => x.name === f.name));
-    }
-
-    // NAVIGATION
+    // NAV
     function setupNav() {
       document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -839,9 +933,8 @@
           document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
           item.classList.add('active');
 
-          if (page === 'friends') {
-            renderFriendsPage();
-          }
+          if (page === 'online') renderOnlineUsers();
+          if (page === 'friends') renderFriends();
         });
       });
     }
@@ -857,73 +950,7 @@
       });
     }
 
-    // FRIENDS PAGE WITH ADD BUTTON
-    function renderFriendsPage() {
-      const container = document.getElementById('friendsList');
-      const allFriends = state.friends;
-      const available = getMockFriends();
-
-      if (allFriends.length === 0 && available.length === 0) {
-        container.innerHTML = '<div class="friend-card empty">Pas d\'amis disponibles</div>';
-        return;
-      }
-
-      let html = '';
-      
-      if (allFriends.length > 0) {
-        html += '<h3 style="grid-column: 1/-1; margin-top: 0;">Mes Amis</h3>';
-        html += allFriends.map(friend => `
-          <div class="friend-card">
-            <div class="friend-name">${friend.name}</div>
-            <div class="friend-stat">
-              <div class="friend-stat-item">
-                <div class="friend-stat-value">${friend.maxStreak}</div>
-                <div class="friend-stat-label">Streak</div>
-              </div>
-              <div class="friend-stat-item">
-                <div class="friend-stat-value">${friend.exp}</div>
-                <div class="friend-stat-label">EXP</div>
-              </div>
-            </div>
-            <button class="add-friend-btn added" disabled>Ami ✓</button>
-          </div>
-        `).join('');
-      }
-
-      if (available.length > 0) {
-        html += '<h3 style="grid-column: 1/-1;">Ajouter un Ami</h3>';
-        html += available.map(friend => `
-          <div class="friend-card">
-            <div class="friend-name">${friend.name}</div>
-            <div class="friend-stat">
-              <div class="friend-stat-item">
-                <div class="friend-stat-value">${friend.maxStreak}</div>
-                <div class="friend-stat-label">Streak</div>
-              </div>
-              <div class="friend-stat-item">
-                <div class="friend-stat-value">${friend.exp}</div>
-                <div class="friend-stat-label">EXP</div>
-              </div>
-            </div>
-            <button class="add-friend-btn" onclick="addFriend('${friend.name}', ${friend.maxStreak}, ${friend.exp})">Ajouter</button>
-          </div>
-        `).join('');
-      }
-
-      container.innerHTML = html;
-    }
-
-    function addFriend(name, maxStreak, exp) {
-      state.friends.push({ name, maxStreak, exp });
-      saveState();
-      updateProfile();
-      renderFriendsPage();
-    }
-
-    // AUTO SAVE
-    setInterval(saveState, 10000);
-
-    // MOBILE MENU
+    // MOBILE
     if (window.innerWidth <= 768) {
       const menuBtn = document.createElement('button');
       menuBtn.textContent = '☰';
@@ -931,6 +958,9 @@
       menuBtn.onclick = () => document.getElementById('sidebar').classList.toggle('active');
       document.body.appendChild(menuBtn);
     }
+
+    // AUTO SAVE
+    setInterval(saveState, 10000);
   </script>
 </body>
 </html>
