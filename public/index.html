@@ -3,964 +3,1445 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日本語 - Apprendre</title>
+  <title>日本語マスター</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --primary: #2563eb;
-      --dark: #1e293b;
-      --light: #f8fafc;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --text-light: #475569;
-      --bg: #ffffff;
-      --success: #10b981;
-      --error: #ef4444;
+      --bg: #0d0f14;
+      --surface: #161920;
+      --surface2: #1e2230;
+      --border: #2a2f3f;
+      --accent: #4f8ef7;
+      --accent2: #f7c94f;
+      --accent3: #4ff79a;
+      --danger: #f74f6a;
+      --text: #e8eaf2;
+      --muted: #6b7394;
+      --card-radius: 14px;
     }
 
     html, body {
-      width: 100%;
-      height: 100%;
-      background: var(--light);
+      width: 100%; height: 100%;
+      background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Syne', sans-serif;
       overflow: hidden;
     }
 
-    .container {
+    /* ─── LAYOUT ─── */
+    .app {
       display: grid;
-      grid-template-columns: 250px 1fr;
-      width: 100%;
+      grid-template-columns: 220px 1fr;
       height: 100vh;
-      gap: 1px;
-      background: var(--border);
     }
 
-    /* SIDEBAR */
+    /* ─── SIDEBAR ─── */
     .sidebar {
-      background: var(--bg);
-      padding: 30px 20px;
-      overflow-y: auto;
+      background: var(--surface);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      padding: 24px 14px;
+      gap: 4px;
+      overflow-y: auto;
     }
 
     .logo {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 30px;
-      color: var(--primary);
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: -1px;
+      margin-bottom: 28px;
+      padding: 0 6px;
     }
+    .logo span { color: var(--accent2); }
 
     .nav-item {
-      padding: 12px 16px;
-      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.2s;
-      color: var(--text-light);
-      font-size: 14px;
-      font-weight: 500;
+      transition: all 0.18s;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--accent); color: #fff; }
+
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
     }
 
-    .nav-item:hover {
-      background: #f1f5f9;
-      color: var(--text);
+    .online-dot {
+      width: 8px; height: 8px;
+      background: var(--accent3);
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
     }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
-    .nav-item.active {
-      background: #dbeafe;
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    /* MAIN */
+    /* ─── MAIN ─── */
     .main {
-      background: var(--bg);
-      overflow-y: auto;
-      padding: 40px;
-      position: relative;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .page {
       display: none;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .page.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    /* QUIZ PAGE */
-    .quiz-wrapper {
-      display: flex;
       flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      padding: 36px 40px;
+      animation: fadeUp 0.25s ease;
+    }
+    .page.active { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-title {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 28px;
+      color: var(--text);
+    }
+
+    /* ─── HOME (QUIZ MENU) ─── */
+    #page-home {
       align-items: center;
       justify-content: center;
-      min-height: 100%;
-      gap: 50px;
-    }
-
-    .quiz-header {
-      display: flex;
-      gap: 80px;
-      align-items: center;
-    }
-
-    .streak-display {
       text-align: center;
     }
 
-    .streak-number {
-      font-size: 56px;
-      font-weight: 700;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .flame {
-      font-size: 48px;
-      animation: flameFlicker 0.6s infinite;
-    }
-
-    @keyframes flameFlicker {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
-
-    .timer-display {
-      text-align: center;
-    }
-
-    .timer-label {
-      font-size: 12px;
-      color: var(--text-light);
-      text-transform: uppercase;
-      margin-bottom: 10px;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-    }
-
-    .timer-countdown {
-      font-size: 48px;
-      font-weight: 700;
-      color: var(--primary);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .mode-toggle {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .mode-btn {
-      padding: 10px 24px;
-      border: 2px solid var(--border);
-      background: var(--bg);
-      color: var(--text-light);
-      cursor: pointer;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-
-    .mode-btn.active {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: white;
-    }
-
-    .character {
-      font-size: 140px;
-      font-weight: 700;
-      color: var(--dark);
+    .home-header { margin-bottom: 50px; }
+    .home-title {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--accent);
       line-height: 1;
     }
+    .home-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 10px;
+      font-family: 'Space Mono', monospace;
+    }
 
-    .answers {
+    .quiz-cards {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      width: 100%;
-      max-width: 700px;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 620px;
     }
 
-    .answer-btn {
-      padding: 20px;
+    .quiz-card {
+      background: var(--surface);
       border: 2px solid var(--border);
-      background: var(--bg);
-      color: var(--text);
+      border-radius: var(--card-radius);
+      padding: 36px 28px;
       cursor: pointer;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
       transition: all 0.2s;
-      font-family: inherit;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .quiz-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--accent));
+    }
+    .quiz-card:hover {
+      border-color: var(--card-accent, var(--accent));
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
     }
 
-    .answer-btn:hover:not(:disabled) {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: #dbeafe;
-    }
-
-    .answer-btn.correct {
-      border-color: var(--success);
-      background: #d1fae5;
-      color: var(--success);
-    }
-
-    .answer-btn.wrong {
-      border-color: var(--error);
-      background: #fee2e2;
-      color: var(--error);
-    }
-
-    .answer-btn:disabled {
-      cursor: not-allowed;
-    }
-
-    /* OVERLAY */
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(239, 68, 68, 0.2);
-      display: none;
-      pointer-events: none;
-      animation: overlayFlash 0.6s ease-out;
-      z-index: 100;
-    }
-
-    .overlay.show {
+    .quiz-card-icon {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 52px;
+      font-weight: 900;
+      margin-bottom: 14px;
       display: block;
     }
-
-    @keyframes overlayFlash {
-      from { background: rgba(239, 68, 68, 0.4); }
-      to { background: rgba(239, 68, 68, 0); }
-    }
-
-    /* USERS/FRIENDS LIST */
-    .users-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 20px;
-    }
-
-    .user-card {
-      background: var(--light);
-      border: 1px solid var(--border);
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      transition: all 0.2s;
-    }
-
-    .user-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-    }
-
-    .user-avatar {
-      width: 60px;
-      height: 60px;
-      background: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      color: white;
-      font-weight: 700;
-      margin: 0 auto 15px;
-    }
-
-    .user-name {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .user-stats {
-      font-size: 12px;
-      color: var(--text-light);
-      margin-bottom: 15px;
-    }
-
-    .user-stat-line {
-      display: flex;
-      justify-content: space-around;
+    .quiz-card-title {
+      font-size: 18px;
+      font-weight: 800;
       margin-bottom: 8px;
     }
-
-    .user-action-btn {
-      width: 100%;
-      padding: 10px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
-      font-family: inherit;
+    .quiz-card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      line-height: 1.5;
     }
 
-    .user-action-btn:hover {
-      opacity: 0.9;
-    }
-
-    .user-action-btn.friend {
-      background: var(--success);
-    }
-
-    .user-action-btn.added {
-      background: var(--text-light);
-      cursor: default;
-    }
-
-    /* PROFILE PAGE */
-    .profile-card {
-      background: var(--light);
-      border: 1px solid var(--border);
-      padding: 40px;
-      border-radius: 12px;
-      max-width: 600px;
-    }
-
-    .profile-header {
-      display: flex;
-      align-items: center;
-      gap: 30px;
-      margin-bottom: 40px;
-      padding-bottom: 30px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .profile-avatar {
-      width: 100px;
-      height: 100px;
-      background: var(--primary);
-      border-radius: 50%;
-      display: flex;
+    /* ─── QUIZ IMMERSION ─── */
+    #page-quiz {
       align-items: center;
       justify-content: center;
-      font-size: 48px;
-      color: white;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .profile-info h2 {
-      font-size: 24px;
-      margin-bottom: 8px;
-    }
-
-    .profile-info p {
-      font-size: 14px;
-      color: var(--text-light);
-      margin-bottom: 5px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-
-    .stat-box {
-      background: var(--light);
-      border: 1px solid var(--border);
-      padding: 20px;
-      border-radius: 12px;
       text-align: center;
+      gap: 0;
+      padding: 20px;
+      position: relative;
     }
 
-    .stat-box-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 10px;
-    }
-
-    .stat-box-label {
-      font-size: 12px;
-      color: var(--text-light);
+    .quiz-mode-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 32px;
     }
 
-    /* REFERENCE PAGE */
-    .reference-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-      gap: 15px;
+    .quiz-stats-row {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 40px;
     }
 
-    .char-card {
-      background: var(--light);
-      border: 1px solid var(--border);
-      padding: 15px;
+    .stat-pill {
       text-align: center;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
     }
-
-    .char-card:hover {
-      border-color: var(--primary);
-      background: #dbeafe;
+    .stat-pill-val {
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent);
+    }
+    .stat-pill-val.timer-val { color: var(--accent2); }
+    .stat-pill-val.timer-low { color: var(--danger) !important; }
+    .stat-pill-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-top: 4px;
     }
 
     .char-display {
-      font-size: 36px;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .char-romaji {
-      font-size: 11px;
-      color: var(--text-light);
-    }
-
-    h2 {
-      font-size: 28px;
-      margin-bottom: 30px;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 160px;
+      font-weight: 900;
       color: var(--text);
+      line-height: 1;
+      margin-bottom: 48px;
+      user-select: none;
+    }
+
+    .answers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      max-width: 640px;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+
+    .ans-btn {
+      padding: 18px 10px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
       font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ans-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgba(79,142,247,0.1);
+      color: var(--accent);
+    }
+    .ans-btn.correct { border-color: var(--accent3) !important; background: rgba(79,247,154,0.15) !important; color: var(--accent3) !important; }
+    .ans-btn.wrong { border-color: var(--danger) !important; background: rgba(247,79,106,0.15) !important; color: var(--danger) !important; }
+    .ans-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+    /* ─── GAME OVER OVERLAY ─── */
+    .gameover-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,15,20,0.95);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      animation: fadeIn 0.3s ease;
+    }
+    .gameover-overlay.show { display: flex; }
+
+    @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+
+    .gameover-title {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 72px;
+      font-weight: 900;
+      color: var(--danger);
+      letter-spacing: -2px;
+    }
+    .gameover-results {
+      display: flex;
+      gap: 40px;
+      margin: 16px 0;
+    }
+    .gameover-stat {
+      text-align: center;
+    }
+    .gameover-stat-val {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--accent2);
+    }
+    .gameover-stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-top: 4px;
     }
 
-    h3 {
-      font-size: 16px;
-      margin-bottom: 20px;
-      margin-top: 30px;
-      color: var(--text);
-      font-weight: 600;
+    .btn {
+      padding: 14px 32px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-2px); }
+    .btn-ghost { background: transparent; border: 2px solid var(--border); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    /* ─── FLASH OVERLAY ─── */
+    .flash-overlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 150;
+      display: none;
+    }
+    .flash-overlay.wrong-flash {
+      display: block;
+      background: rgba(247,79,106,0.15);
+      animation: flashAnim 0.5s ease-out forwards;
+    }
+    @keyframes flashAnim {
+      0%{background:rgba(247,79,106,0.3)}
+      100%{background:transparent}
     }
 
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
+    /* ─── LEADERBOARD ─── */
+    #page-leaderboard { gap: 0; }
 
-    ::-webkit-scrollbar-track {
+    .lb-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+    .lb-tab {
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
       background: transparent;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .lb-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .lb-tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-table th {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .lb-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(42,47,63,0.5);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .lb-table tr:hover td { background: var(--surface2); cursor: pointer; }
+    .lb-rank {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      width: 40px;
+    }
+    .lb-rank.top1 { color: #ffd700; }
+    .lb-rank.top2 { color: #c0c0c0; }
+    .lb-rank.top3 { color: #cd7f32; }
+
+    .lb-user { display: flex; align-items: center; gap: 12px; }
+    .lb-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .lb-username { font-weight: 700; font-size: 14px; }
+    .lb-online { width: 7px; height: 7px; background: var(--accent3); border-radius: 50%; display: inline-block; margin-left: 6px; }
+
+    .lb-value {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--accent);
     }
 
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 4px;
+    /* ─── PROFILE MODAL ─── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,15,20,0.88);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s;
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 36px;
+      max-width: 480px;
+      width: 90%;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none;
+      color: var(--muted); font-size: 20px; cursor: pointer;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+    }
+    .modal-close:hover { background: var(--surface2); color: var(--text); }
+
+    .modal-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; font-weight: 800; color: #fff;
+      margin: 0 auto 20px;
+    }
+    .modal-name {
+      font-size: 22px; font-weight: 800;
+      text-align: center; margin-bottom: 4px;
+    }
+    .modal-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      text-align: center; margin-bottom: 24px;
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--primary);
+    .modal-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-bottom: 20px;
+    }
+    .modal-stat {
+      background: var(--surface2);
+      border-radius: 10px; padding: 14px;
+      text-align: center;
+    }
+    .modal-stat-val {
+      font-size: 28px; font-weight: 800;
+      color: var(--accent); line-height: 1;
+    }
+    .modal-stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); margin-top: 4px;
     }
 
+    /* ─── MY PROFILE (edit) ─── */
+    #page-profile { gap: 24px; max-width: 540px; }
+
+    .profile-big-avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 44px; font-weight: 800; color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    .input-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+    }
+    .input-field {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      transition: border-color 0.15s;
+    }
+    .input-field:focus { outline: none; border-color: var(--accent); }
+
+    .color-picker-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .color-swatch {
+      width: 36px; height: 36px;
+      border-radius: 50%; cursor: pointer;
+      border: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+
+    .profile-stats-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    }
+    .profile-stat {
+      background: var(--surface2); border-radius: 10px; padding: 16px; text-align: center;
+    }
+    .profile-stat-val { font-size: 32px; font-weight: 800; color: var(--accent); }
+    .profile-stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-top: 4px;
+    }
+
+    /* ─── REFERENCE ─── */
+    #page-reference {}
+    .ref-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 10px;
+    }
+    .char-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 4px;
+      text-align: center; cursor: default;
+      transition: all 0.15s;
+    }
+    .char-card:hover { border-color: var(--accent); }
+    .char-jp { font-family: 'Noto Sans JP', sans-serif; font-size: 28px; font-weight: 700; }
+    .char-rom {
+      font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px;
+    }
+
+    /* ─── CHAT ─── */
+    #page-chat {
+      padding: 0;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    .chat-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      font-size: 20px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-msg { display: flex; gap: 12px; align-items: flex-start; }
+    .chat-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .chat-bubble-wrap {}
+    .chat-user { font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+    .chat-bubble {
+      background: var(--surface2);
+      border-radius: 0 10px 10px 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 520px;
+      word-break: break-word;
+    }
+    .chat-bubble.mine { background: rgba(79,142,247,0.18); border-radius: 10px 0 10px 10px; }
+    .chat-msg.mine { flex-direction: row-reverse; }
+    .chat-msg.mine .chat-user { text-align: right; }
+    .chat-time {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: var(--muted); margin-left: 6px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+      padding: 16px 32px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      transition: border-color 0.15s;
+    }
+    .chat-input:focus { outline: none; border-color: var(--accent); }
+    .chat-send-btn {
+      padding: 12px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .chat-send-btn:hover { opacity: 0.85; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 500;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-
+      .app { grid-template-columns: 1fr; }
       .sidebar {
-        position: fixed;
-        left: -250px;
-        top: 0;
-        width: 250px;
-        height: 100vh;
-        z-index: 1000;
+        position: fixed; top: 0; left: -240px;
+        width: 220px; height: 100vh; z-index: 400;
         transition: left 0.3s;
       }
-
-      .sidebar.active {
-        left: 0;
+      .sidebar.open { left: 0; }
+      .mobile-menu {
+        position: fixed; top: 14px; left: 14px; z-index: 390;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 8px; padding: 10px 13px;
+        font-size: 18px; cursor: pointer; color: var(--text);
       }
-
-      .main {
-        padding: 20px;
-      }
-
-      .quiz-header {
-        gap: 30px;
-      }
-
-      .character {
-        font-size: 80px;
-      }
-
-      .answers {
-        grid-template-columns: 1fr;
-      }
-
-      .users-grid {
-        grid-template-columns: 1fr;
-      }
+      .page { padding: 20px; padding-top: 60px; }
+      .char-display { font-size: 100px; }
+      .answers-grid { grid-template-columns: 1fr 1fr; }
+      .quiz-cards { grid-template-columns: 1fr; }
+      #page-chat { padding: 0; }
+      .chat-header { padding: 60px 20px 16px; }
+      .chat-messages { padding: 14px 16px; }
+      .chat-input-row { padding: 12px 16px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- SIDEBAR -->
-    <div class="sidebar" id="sidebar">
-      <div class="logo">日本語</div>
-      <div class="nav-item active" data-page="quiz">🎮 Quiz</div>
-      <div class="nav-item" data-page="reference">📖 Caractères</div>
-      <div class="nav-item" data-page="online">👥 Gens en ligne</div>
-      <div class="nav-item" data-page="friends">💬 Mes Amis</div>
-      <div class="nav-item" data-page="profile">👤 Profile</div>
-    </div>
 
-    <!-- MAIN -->
-    <div class="main">
-      <!-- QUIZ PAGE -->
-      <div id="quiz" class="page active">
-        <div class="quiz-wrapper">
-          <div class="mode-toggle">
-            <button class="mode-btn active" data-mode="hiragana">Hiragana</button>
-            <button class="mode-btn" data-mode="katakana">Katakana</button>
-          </div>
-
-          <div class="quiz-header">
-            <div class="streak-display">
-              <div class="streak-number">
-                <span id="streak">0</span>
-                <span class="flame">🔥</span>
-              </div>
-            </div>
-            <div class="timer-display">
-              <div class="timer-label">Temps</div>
-              <div class="timer-countdown" id="countdown">5</div>
-            </div>
-          </div>
-
-          <div class="character" id="character">あ</div>
-
-          <div class="answers" id="answers"></div>
-        </div>
-      </div>
-
-      <!-- REFERENCE PAGE -->
-      <div id="reference" class="page">
-        <h2>Hiragana & Katakana</h2>
-        <h3>Hiragana</h3>
-        <div class="reference-grid" id="hiraganaGrid"></div>
-        <h3>Katakana</h3>
-        <div class="reference-grid" id="katakanaGrid"></div>
-      </div>
-
-      <!-- ONLINE USERS PAGE -->
-      <div id="online" class="page">
-        <h2>Gens en ligne</h2>
-        <div class="users-grid" id="onlineGrid"></div>
-      </div>
-
-      <!-- FRIENDS PAGE -->
-      <div id="friends" class="page">
-        <h2>Mes Amis</h2>
-        <div class="users-grid" id="friendsGrid"></div>
-      </div>
-
-      <!-- PROFILE PAGE -->
-      <div id="profile" class="page">
-        <h2>Mon Profile</h2>
-        <div class="profile-card">
-          <div class="profile-header">
-            <div class="profile-avatar" id="profileAvatar">A</div>
-            <div class="profile-info">
-              <h2 id="profileName">Utilisateur</h2>
-              <p id="friendsCount">Amis: 0</p>
-            </div>
-          </div>
-
-          <h3>Statistiques</h3>
-          <div class="stats-grid">
-            <div class="stat-box">
-              <div class="stat-box-value" id="maxHira">0</div>
-              <div class="stat-box-label">Max Streak Hiragana</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-value" id="maxKata">0</div>
-              <div class="stat-box-label">Max Streak Katakana</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-value" id="totalExp">0</div>
-              <div class="stat-box-label">Total EXP</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-value" id="totalQuestions">0</div>
-              <div class="stat-box-label">Questions</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="logo">日本語<span>マスター</span></div>
+    <div class="nav-item active" data-page="home"><span class="nav-icon">🏠</span> Accueil</div>
+    <div class="nav-item" data-page="reference"><span class="nav-icon">📖</span> Caractères</div>
+    <div class="nav-item" data-page="leaderboard"><span class="nav-icon">🏆</span> Classement</div>
+    <div class="nav-item" data-page="chat"><span class="nav-icon">💬</span> Chat</div>
+    <div class="nav-item sidebar-bottom" data-page="profile"><span class="nav-icon">👤</span> Mon Profil</div>
   </div>
 
-  <div class="overlay" id="overlay"></div>
+  <!-- MAIN -->
+  <div class="main">
 
-  <script>
-    // DATA
-    const hiraganaData = [
-      { char: 'あ', romaji: 'a' }, { char: 'い', romaji: 'i' }, { char: 'う', romaji: 'u' }, { char: 'え', romaji: 'e' }, { char: 'お', romaji: 'o' },
-      { char: 'か', romaji: 'ka' }, { char: 'き', romaji: 'ki' }, { char: 'く', romaji: 'ku' }, { char: 'け', romaji: 'ke' }, { char: 'こ', romaji: 'ko' },
-      { char: 'が', romaji: 'ga' }, { char: 'ぎ', romaji: 'gi' }, { char: 'ぐ', romaji: 'gu' }, { char: 'げ', romaji: 'ge' }, { char: 'ご', romaji: 'go' },
-      { char: 'さ', romaji: 'sa' }, { char: 'し', romaji: 'si' }, { char: 'す', romaji: 'su' }, { char: 'せ', romaji: 'se' }, { char: 'そ', romaji: 'so' },
-      { char: 'ざ', romaji: 'za' }, { char: 'じ', romaji: 'zi' }, { char: 'ず', romaji: 'zu' }, { char: 'ぜ', romaji: 'ze' }, { char: 'ぞ', romaji: 'zo' },
-      { char: 'た', romaji: 'ta' }, { char: 'ち', romaji: 'ti' }, { char: 'つ', romaji: 'tu' }, { char: 'て', romaji: 'te' }, { char: 'と', romaji: 'to' },
-      { char: 'だ', romaji: 'da' }, { char: 'ぢ', romaji: 'di' }, { char: 'づ', romaji: 'du' }, { char: 'で', romaji: 'de' }, { char: 'ど', romaji: 'do' },
-      { char: 'な', romaji: 'na' }, { char: 'に', romaji: 'ni' }, { char: 'ぬ', romaji: 'nu' }, { char: 'ね', romaji: 'ne' }, { char: 'の', romaji: 'no' },
-      { char: 'は', romaji: 'ha' }, { char: 'ひ', romaji: 'hi' }, { char: 'ふ', romaji: 'hu' }, { char: 'へ', romaji: 'he' }, { char: 'ほ', romaji: 'ho' },
-      { char: 'ば', romaji: 'ba' }, { char: 'び', romaji: 'bi' }, { char: 'ぶ', romaji: 'bu' }, { char: 'べ', romaji: 'be' }, { char: 'ぼ', romaji: 'bo' },
-      { char: 'ぱ', romaji: 'pa' }, { char: 'ぴ', romaji: 'pi' }, { char: 'ぷ', romaji: 'pu' }, { char: 'ぺ', romaji: 'pe' }, { char: 'ぽ', romaji: 'po' },
-      { char: 'ま', romaji: 'ma' }, { char: 'み', romaji: 'mi' }, { char: 'む', romaji: 'mu' }, { char: 'め', romaji: 'me' }, { char: 'も', romaji: 'mo' },
-      { char: 'や', romaji: 'ya' }, { char: 'ゆ', romaji: 'yu' }, { char: 'よ', romaji: 'yo' },
-      { char: 'ら', romaji: 'ra' }, { char: 'り', romaji: 'ri' }, { char: 'る', romaji: 'ru' }, { char: 'れ', romaji: 're' }, { char: 'ろ', romaji: 'ro' },
-      { char: 'わ', romaji: 'wa' }, { char: 'を', romaji: 'wo' }, { char: 'ん', romaji: 'n' }
-    ];
-
-    const katakanaData = [
-      { char: 'ア', romaji: 'a' }, { char: 'イ', romaji: 'i' }, { char: 'ウ', romaji: 'u' }, { char: 'エ', romaji: 'e' }, { char: 'オ', romaji: 'o' },
-      { char: 'カ', romaji: 'ka' }, { char: 'キ', romaji: 'ki' }, { char: 'ク', romaji: 'ku' }, { char: 'ケ', romaji: 'ke' }, { char: 'コ', romaji: 'ko' },
-      { char: 'ガ', romaji: 'ga' }, { char: 'ギ', romaji: 'gi' }, { char: 'グ', romaji: 'gu' }, { char: 'ゲ', romaji: 'ge' }, { char: 'ゴ', romaji: 'go' },
-      { char: 'サ', romaji: 'sa' }, { char: 'シ', romaji: 'si' }, { char: 'ス', romaji: 'su' }, { char: 'セ', romaji: 'se' }, { char: 'ソ', romaji: 'so' },
-      { char: 'ザ', romaji: 'za' }, { char: 'ジ', romaji: 'zi' }, { char: 'ズ', romaji: 'zu' }, { char: 'ゼ', romaji: 'ze' }, { char: 'ゾ', romaji: 'zo' },
-      { char: 'タ', romaji: 'ta' }, { char: 'チ', romaji: 'ti' }, { char: 'ツ', romaji: 'tu' }, { char: 'テ', romaji: 'te' }, { char: 'ト', romaji: 'to' },
-      { char: 'ダ', romaji: 'da' }, { char: 'ヂ', romaji: 'di' }, { char: 'ヅ', romaji: 'du' }, { char: 'デ', romaji: 'de' }, { char: 'ド', romaji: 'do' },
-      { char: 'ナ', romaji: 'na' }, { char: 'ニ', romaji: 'ni' }, { char: 'ヌ', romaji: 'nu' }, { char: 'ネ', romaji: 'ne' }, { char: 'ノ', romaji: 'no' },
-      { char: 'ハ', romaji: 'ha' }, { char: 'ヒ', romaji: 'hi' }, { char: 'フ', romaji: 'hu' }, { char: 'ヘ', romaji: 'he' }, { char: 'ホ', romaji: 'ho' },
-      { char: 'バ', romaji: 'ba' }, { char: 'ビ', romaji: 'bi' }, { char: 'ブ', romaji: 'bu' }, { char: 'ベ', romaji: 'be' }, { char: 'ボ', romaji: 'bo' },
-      { char: 'パ', romaji: 'pa' }, { char: 'ピ', romaji: 'pi' }, { char: 'プ', romaji: 'pu' }, { char: 'ペ', romaji: 'pe' }, { char: 'ポ', romaji: 'po' },
-      { char: 'マ', romaji: 'ma' }, { char: 'ミ', romaji: 'mi' }, { char: 'ム', romaji: 'mu' }, { char: 'メ', romaji: 'me' }, { char: 'モ', romaji: 'mo' },
-      { char: 'ヤ', romaji: 'ya' }, { char: 'ユ', romaji: 'yu' }, { char: 'ヨ', romaji: 'yo' },
-      { char: 'ラ', romaji: 'ra' }, { char: 'リ', romaji: 'ri' }, { char: 'ル', romaji: 'ru' }, { char: 'レ', romaji: 're' }, { char: 'ロ', romaji: 'ro' },
-      { char: 'ワ', romaji: 'wa' }, { char: 'ヲ', romaji: 'wo' }, { char: 'ン', romaji: 'n' }
-    ];
-
-    // STATE
-    const state = {
-      mode: 'hiragana',
-      streak: 0,
-      maxStreakHira: 0,
-      maxStreakKata: 0,
-      exp: 0,
-      totalQuestions: 0,
-      username: 'User' + Math.floor(Math.random() * 10000),
-      userId: null,
-      friends: [],
-      onlineUsers: [],
-      currentChar: null,
-      correctAnswer: null,
-      timerInterval: null,
-      currentTimer: 5
-    };
-
-    // SOCKET
-    const socket = io();
-
-    socket.on('connect', () => {
-      state.userId = localStorage.getItem('userId');
-      socket.emit('user_join', state.username, { userId: state.userId });
-    });
-
-    socket.on('user_id', (userId) => {
-      state.userId = userId;
-      localStorage.setItem('userId', userId);
-    });
-
-    socket.on('online_users', (users) => {
-      state.onlineUsers = users;
-      if (document.querySelector('#online.page.active')) {
-        renderOnlineUsers();
-      }
-    });
-
-    // LOAD & SAVE
-    function loadState() {
-      const saved = localStorage.getItem('japaneseState');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        Object.assign(state, parsed);
-      }
-    }
-
-    function saveState() {
-      localStorage.setItem('japaneseState', JSON.stringify({
-        maxStreakHira: state.maxStreakHira,
-        maxStreakKata: state.maxStreakKata,
-        exp: state.exp,
-        totalQuestions: state.totalQuestions,
-        username: state.username
-      }));
-
-      if (state.userId) {
-        socket.emit('update_stats', state.userId, {
-          maxStreakHira: state.maxStreakHira,
-          maxStreakKata: state.maxStreakKata,
-          exp: state.exp,
-          totalQuestions: state.totalQuestions
-        });
-      }
-    }
-
-    loadState();
-    init();
-
-    function init() {
-      renderReference();
-      updateProfile();
-      setupNav();
-      setupModes();
-      newQuestion();
-    }
-
-    // QUIZ
-    function newQuestion() {
-      clearTimeout(state.timerInterval);
-      const data = state.mode === 'hiragana' ? hiraganaData : katakanaData;
-      const item = data[Math.floor(Math.random() * data.length)];
-      state.currentChar = item.char;
-      state.correctAnswer = item.romaji;
-
-      document.getElementById('character').textContent = state.currentChar;
-
-      const wrong = data
-        .filter(x => x.romaji !== state.correctAnswer)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 2)
-        .map(x => x.romaji);
-
-      const answers = [state.correctAnswer, ...wrong].sort(() => Math.random() - 0.5);
-
-      const container = document.getElementById('answers');
-      container.innerHTML = '';
-      answers.forEach(ans => {
-        const btn = document.createElement('button');
-        btn.className = 'answer-btn';
-        btn.textContent = ans;
-        btn.onclick = () => checkAnswer(ans, btn);
-        container.appendChild(btn);
-      });
-
-      startTimer();
-    }
-
-    function startTimer() {
-      state.currentTimer = 5;
-      updateTimerDisplay();
-
-      state.timerInterval = setInterval(() => {
-        state.currentTimer--;
-        updateTimerDisplay();
-
-        if (state.currentTimer <= 0) {
-          clearInterval(state.timerInterval);
-          timeoutAnswer();
-        }
-      }, 1000);
-    }
-
-    function updateTimerDisplay() {
-      document.getElementById('countdown').textContent = Math.max(0, state.currentTimer);
-    }
-
-    function checkAnswer(answer, btn) {
-      clearInterval(state.timerInterval);
-      document.querySelectorAll('.answer-btn').forEach(b => b.disabled = true);
-
-      const isCorrect = answer === state.correctAnswer;
-
-      if (isCorrect) {
-        btn.classList.add('correct');
-        state.streak++;
-        state.exp += 10;
-        state.totalQuestions++;
-        if (state.mode === 'hiragana') {
-          state.maxStreakHira = Math.max(state.maxStreakHira, state.streak);
-        } else {
-          state.maxStreakKata = Math.max(state.maxStreakKata, state.streak);
-        }
-      } else {
-        btn.classList.add('wrong');
-        document.querySelector('.answer-btn').classList.add('correct');
-        showOverlay();
-        state.streak = 0;
-        state.totalQuestions++;
-      }
-
-      updateStats();
-      saveState();
-
-      setTimeout(() => newQuestion(), isCorrect ? 600 : 1000);
-    }
-
-    function timeoutAnswer() {
-      const buttons = document.querySelectorAll('.answer-btn');
-      buttons.forEach(b => {
-        b.disabled = true;
-        if (b.textContent === state.correctAnswer) {
-          b.classList.add('correct');
-        } else {
-          b.classList.add('wrong');
-        }
-      });
-      showOverlay();
-      state.streak = 0;
-      state.totalQuestions++;
-      updateStats();
-      saveState();
-      setTimeout(() => newQuestion(), 1000);
-    }
-
-    function showOverlay() {
-      const overlay = document.getElementById('overlay');
-      overlay.classList.add('show');
-      setTimeout(() => overlay.classList.remove('show'), 600);
-    }
-
-    // REFERENCE
-    function renderReference() {
-      document.getElementById('hiraganaGrid').innerHTML = hiraganaData.map(item => 
-        `<div class="char-card"><div class="char-display">${item.char}</div><div class="char-romaji">${item.romaji}</div></div>`
-      ).join('');
-
-      document.getElementById('katakanaGrid').innerHTML = katakanaData.map(item => 
-        `<div class="char-card"><div class="char-display">${item.char}</div><div class="char-romaji">${item.romaji}</div></div>`
-      ).join('');
-    }
-
-    // ONLINE USERS
-    function renderOnlineUsers() {
-      const grid = document.getElementById('onlineGrid');
-      grid.innerHTML = state.onlineUsers.map(user => `
-        <div class="user-card">
-          <div class="user-avatar">${user.username[0]}</div>
-          <div class="user-name">${user.username}</div>
-          <div class="user-stats">
-            <div class="user-stat-line">
-              <span>Streak: ${user.maxStreak}</span>
-              <span>EXP: ${user.exp}</span>
-            </div>
-          </div>
-          <button class="user-action-btn ${state.friends.find(f => f.id === user.id) ? 'added' : ''}" 
-                  onclick="addFriend('${user.id}', '${user.username}', ${user.maxStreak}, ${user.exp})"
-                  ${state.friends.find(f => f.id === user.id) ? 'disabled' : ''}>
-            ${state.friends.find(f => f.id === user.id) ? '✓ Ami' : 'Ajouter'}
-          </button>
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="home-header">
+        <div class="home-title">日本語</div>
+        <div class="home-sub">// choisissez votre mode d'entraînement</div>
+      </div>
+      <div class="quiz-cards">
+        <div class="quiz-card" style="--card-accent:#4f8ef7" onclick="startQuiz('hiragana')">
+          <span class="quiz-card-icon" style="color:#4f8ef7">あ</span>
+          <div class="quiz-card-title">Hiragana</div>
+          <div class="quiz-card-desc">Quiz immersif en mode survie.<br>Aussi loin que possible.</div>
         </div>
-      `).join('');
-    }
-
-    // FRIENDS
-    function renderFriends() {
-      const grid = document.getElementById('friendsGrid');
-      if (state.friends.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text-light);">Pas d\'amis pour le moment<br>Ajoute des amis depuis "Gens en ligne"!</div>';
-        return;
-      }
-
-      grid.innerHTML = state.friends.map(friend => `
-        <div class="user-card">
-          <div class="user-avatar">${friend.username[0]}</div>
-          <div class="user-name">${friend.username}</div>
-          <div class="user-stats">
-            <div class="user-stat-line">
-              <span>Streak: ${friend.maxStreak}</span>
-              <span>EXP: ${friend.exp}</span>
-            </div>
-          </div>
-          <button class="user-action-btn friend">👤 Profile</button>
+        <div class="quiz-card" style="--card-accent:#f7c94f" onclick="startQuiz('katakana')">
+          <span class="quiz-card-icon" style="color:#f7c94f">ア</span>
+          <div class="quiz-card-title">Katakana</div>
+          <div class="quiz-card-desc">Quiz immersif en mode survie.<br>Aussi loin que possible.</div>
         </div>
-      `).join('');
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="page" id="page-quiz">
+      <div class="quiz-mode-label" id="quiz-mode-label">HIRAGANA — MODE SURVIE</div>
+      <div class="quiz-stats-row">
+        <div class="stat-pill">
+          <div class="stat-pill-val" id="quiz-streak">0</div>
+          <div class="stat-pill-label">🔥 Streak</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val" id="quiz-exp">0</div>
+          <div class="stat-pill-label">⚡ EXP gagné</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val timer-val" id="quiz-timer">5</div>
+          <div class="stat-pill-label">⏱ Temps</div>
+        </div>
+      </div>
+
+      <div class="char-display" id="quiz-char">あ</div>
+
+      <div class="answers-grid" id="quiz-answers"></div>
+    </div>
+
+    <!-- REFERENCE -->
+    <div class="page" id="page-reference">
+      <div class="page-title">Référence des Caractères</div>
+      <div class="ref-tabs">
+        <button class="lb-tab active" onclick="switchRef('hiragana',this)">Hiragana</button>
+        <button class="lb-tab" onclick="switchRef('katakana',this)">Katakana</button>
+      </div>
+      <div class="ref-grid" id="ref-grid"></div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="page" id="page-leaderboard">
+      <div class="page-title">Classement</div>
+      <div class="lb-tabs">
+        <button class="lb-tab active" onclick="switchLb('total',this)">🏆 Total</button>
+        <button class="lb-tab" onclick="switchLb('exp',this)">⚡ EXP</button>
+        <button class="lb-tab" onclick="switchLb('hira',this)">あ Hiragana</button>
+        <button class="lb-tab" onclick="switchLb('kata',this)">ア Katakana</button>
+      </div>
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Joueur</th>
+            <th id="lb-col-header">Score</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body"></tbody>
+      </table>
+    </div>
+
+    <!-- CHAT -->
+    <div class="page" id="page-chat">
+      <div class="chat-header">💬 Chat Global <span class="online-dot" style="margin-left:8px"></span><span id="chat-online-count" style="font-size:13px;color:var(--muted);font-weight:600"></span></div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="Envoyer un message..." maxlength="300" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send-btn" onclick="sendChat()">Envoyer</button>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="page" id="page-profile">
+      <div class="page-title">Mon Profil</div>
+
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
+        <div class="profile-big-avatar" id="profile-avatar">A</div>
+        <div>
+          <div style="font-size:22px;font-weight:800" id="profile-name-display">Player</div>
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)" id="profile-id-display"></div>
+        </div>
+      </div>
+
+      <div class="input-group" style="margin-bottom:20px">
+        <div class="input-label">Pseudo</div>
+        <input class="input-field" id="profile-username-input" maxlength="20" placeholder="Ton pseudo...">
+      </div>
+
+      <div class="input-group" style="margin-bottom:24px">
+        <div class="input-label">Couleur de profil</div>
+        <div class="color-picker-row" id="color-picker"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveProfile()">Sauvegarder</button>
+
+      <div style="margin-top:32px;margin-bottom:14px;font-weight:800;font-size:16px">Mes statistiques</div>
+      <div class="profile-stats-grid">
+        <div class="profile-stat"><div class="profile-stat-val" id="prof-exp">0</div><div class="profile-stat-label">Total EXP</div></div>
+        <div class="profile-stat"><div class="profile-stat-val" id="prof-questions">0</div><div class="profile-stat-label">Questions</div></div>
+        <div class="profile-stat"><div class="profile-stat-val" id="prof-hira">0</div><div class="profile-stat-label">Best Hira Streak</div></div>
+        <div class="profile-stat"><div class="profile-stat-val" id="prof-kata">0</div><div class="profile-stat-label">Best Kata Streak</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="gameover-overlay" id="gameover-overlay">
+  <div class="gameover-title">GAME OVER</div>
+  <div class="gameover-results">
+    <div class="gameover-stat">
+      <div class="gameover-stat-val" id="go-streak">0</div>
+      <div class="gameover-stat-label">🔥 Meilleur Streak</div>
+    </div>
+    <div class="gameover-stat">
+      <div class="gameover-stat-val" id="go-exp">0</div>
+      <div class="gameover-stat-label">⚡ EXP Gagné</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:14px">
+    <button class="btn btn-primary" onclick="restartQuiz()">Rejouer 🔥</button>
+    <button class="btn btn-ghost" onclick="quitToMenu()">Menu</button>
+  </div>
+</div>
+
+<!-- FLASH WRONG -->
+<div class="flash-overlay" id="flash-overlay"></div>
+
+<!-- PROFILE MODAL (view others) -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeProfileModal()">✕</button>
+    <div class="modal-avatar" id="pm-avatar">A</div>
+    <div class="modal-name" id="pm-name"></div>
+    <div class="modal-badge" id="pm-badge"></div>
+    <div class="modal-stats">
+      <div class="modal-stat"><div class="modal-stat-val" id="pm-exp">0</div><div class="modal-stat-label">Total EXP</div></div>
+      <div class="modal-stat"><div class="modal-stat-val" id="pm-total">0</div><div class="modal-stat-label">Score Total</div></div>
+      <div class="modal-stat"><div class="modal-stat-val" id="pm-hira">0</div><div class="modal-stat-label">Best Hira Streak</div></div>
+      <div class="modal-stat"><div class="modal-stat-val" id="pm-kata">0</div><div class="modal-stat-label">Best Kata Streak</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+const HIRAGANA = [
+  {c:'あ',r:'a'},{c:'い',r:'i'},{c:'う',r:'u'},{c:'え',r:'e'},{c:'お',r:'o'},
+  {c:'か',r:'ka'},{c:'き',r:'ki'},{c:'く',r:'ku'},{c:'け',r:'ke'},{c:'こ',r:'ko'},
+  {c:'が',r:'ga'},{c:'ぎ',r:'gi'},{c:'ぐ',r:'gu'},{c:'げ',r:'ge'},{c:'ご',r:'go'},
+  {c:'さ',r:'sa'},{c:'し',r:'shi'},{c:'す',r:'su'},{c:'せ',r:'se'},{c:'そ',r:'so'},
+  {c:'ざ',r:'za'},{c:'じ',r:'ji'},{c:'ず',r:'zu'},{c:'ぜ',r:'ze'},{c:'ぞ',r:'zo'},
+  {c:'た',r:'ta'},{c:'ち',r:'chi'},{c:'つ',r:'tsu'},{c:'て',r:'te'},{c:'と',r:'to'},
+  {c:'だ',r:'da'},{c:'で',r:'de'},{c:'ど',r:'do'},
+  {c:'な',r:'na'},{c:'に',r:'ni'},{c:'ぬ',r:'nu'},{c:'ね',r:'ne'},{c:'の',r:'no'},
+  {c:'は',r:'ha'},{c:'ひ',r:'hi'},{c:'ふ',r:'fu'},{c:'へ',r:'he'},{c:'ほ',r:'ho'},
+  {c:'ば',r:'ba'},{c:'び',r:'bi'},{c:'ぶ',r:'bu'},{c:'べ',r:'be'},{c:'ぼ',r:'bo'},
+  {c:'ぱ',r:'pa'},{c:'ぴ',r:'pi'},{c:'ぷ',r:'pu'},{c:'ぺ',r:'pe'},{c:'ぽ',r:'po'},
+  {c:'ま',r:'ma'},{c:'み',r:'mi'},{c:'む',r:'mu'},{c:'め',r:'me'},{c:'も',r:'mo'},
+  {c:'や',r:'ya'},{c:'ゆ',r:'yu'},{c:'よ',r:'yo'},
+  {c:'ら',r:'ra'},{c:'り',r:'ri'},{c:'る',r:'ru'},{c:'れ',r:'re'},{c:'ろ',r:'ro'},
+  {c:'わ',r:'wa'},{c:'を',r:'wo'},{c:'ん',r:'n'}
+];
+
+const KATAKANA = [
+  {c:'ア',r:'a'},{c:'イ',r:'i'},{c:'ウ',r:'u'},{c:'エ',r:'e'},{c:'オ',r:'o'},
+  {c:'カ',r:'ka'},{c:'キ',r:'ki'},{c:'ク',r:'ku'},{c:'ケ',r:'ke'},{c:'コ',r:'ko'},
+  {c:'ガ',r:'ga'},{c:'ギ',r:'gi'},{c:'グ',r:'gu'},{c:'ゲ',r:'ge'},{c:'ゴ',r:'go'},
+  {c:'サ',r:'sa'},{c:'シ',r:'shi'},{c:'ス',r:'su'},{c:'セ',r:'se'},{c:'ソ',r:'so'},
+  {c:'ザ',r:'za'},{c:'ジ',r:'ji'},{c:'ズ',r:'zu'},{c:'ゼ',r:'ze'},{c:'ゾ',r:'zo'},
+  {c:'タ',r:'ta'},{c:'チ',r:'chi'},{c:'ツ',r:'tsu'},{c:'テ',r:'te'},{c:'ト',r:'to'},
+  {c:'ダ',r:'da'},{c:'デ',r:'de'},{c:'ド',r:'do'},
+  {c:'ナ',r:'na'},{c:'ニ',r:'ni'},{c:'ヌ',r:'nu'},{c:'ネ',r:'ne'},{c:'ノ',r:'no'},
+  {c:'ハ',r:'ha'},{c:'ヒ',r:'hi'},{c:'フ',r:'fu'},{c:'ヘ',r:'he'},{c:'ホ',r:'ho'},
+  {c:'バ',r:'ba'},{c:'ビ',r:'bi'},{c:'ブ',r:'bu'},{c:'ベ',r:'be'},{c:'ボ',r:'bo'},
+  {c:'パ',r:'pa'},{c:'ピ',r:'pi'},{c:'プ',r:'pu'},{c:'ペ',r:'pe'},{c:'ポ',r:'po'},
+  {c:'マ',r:'ma'},{c:'ミ',r:'mi'},{c:'ム',r:'mu'},{c:'メ',r:'me'},{c:'モ',r:'mo'},
+  {c:'ヤ',r:'ya'},{c:'ユ',r:'yu'},{c:'ヨ',r:'yo'},
+  {c:'ラ',r:'ra'},{c:'リ',r:'ri'},{c:'ル',r:'ru'},{c:'レ',r:'re'},{c:'ロ',r:'ro'},
+  {c:'ワ',r:'wa'},{c:'ヲ',r:'wo'},{c:'ン',r:'n'}
+];
+
+const COLORS = [
+  '#4f8ef7','#f7c94f','#4ff79a','#f74f6a','#c44fff',
+  '#ff7a4f','#4ffff7','#f74fff','#7aff4f','#ff4fa0'
+];
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  userId: null,
+  username: 'Player' + Math.floor(Math.random()*9999),
+  color: '#4f8ef7',
+  stats: { exp: 0, maxStreakHira: 0, maxStreakKata: 0, totalQuestions: 0, correctAnswers: 0 },
+
+  // quiz
+  quizMode: 'hiragana',
+  quizStreak: 0,
+  quizExp: 0,
+  quizActive: false,
+  quizTimer: null,
+  quizTimerVal: 5,
+  quizCorrect: null,
+  quizAnswered: false,
+
+  // lb
+  lbMode: 'total',
+  lbData: [],
+
+  // ref
+  refMode: 'hiragana',
+
+  // online
+  onlineCount: 0
+};
+
+// ═══════════════════════════════════════════════════════
+//  LOCAL STORAGE
+// ═══════════════════════════════════════════════════════
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem('jm_v2');
+    if (raw) {
+      const d = JSON.parse(raw);
+      state.userId = d.userId || null;
+      state.username = d.username || state.username;
+      state.color = d.color || state.color;
+      state.stats = Object.assign(state.stats, d.stats || {});
+    }
+  } catch(e) {}
+}
+
+function saveLocal() {
+  try {
+    localStorage.setItem('jm_v2', JSON.stringify({
+      userId: state.userId,
+      username: state.username,
+      color: state.color,
+      stats: state.stats
+    }));
+  } catch(e) {}
+}
+
+loadLocal();
+
+// ═══════════════════════════════════════════════════════
+//  SOCKET
+// ═══════════════════════════════════════════════════════
+const socket = io({ transports: ['websocket', 'polling'] });
+
+socket.on('connect', () => {
+  socket.emit('user_join', {
+    userId: state.userId,
+    username: state.username,
+    color: state.color
+  }, (data) => {
+    if (!data) return;
+    state.userId = data.userId;
+    // If server returns higher stats (user reconnecting), use those
+    if (data.stats) {
+      state.stats.exp = Math.max(state.stats.exp, data.stats.exp || 0);
+      state.stats.maxStreakHira = Math.max(state.stats.maxStreakHira, data.stats.maxStreakHira || 0);
+      state.stats.maxStreakKata = Math.max(state.stats.maxStreakKata, data.stats.maxStreakKata || 0);
+      state.stats.totalQuestions = Math.max(state.stats.totalQuestions, data.stats.totalQuestions || 0);
+      state.stats.correctAnswers = Math.max(state.stats.correctAnswers, data.stats.correctAnswers || 0);
+    }
+    saveLocal();
+    renderProfile();
+    // Sync stats to server
+    syncStats();
+  });
+
+  // Load chat history
+  socket.emit('get_chat_history', (msgs) => {
+    if (msgs && msgs.length) {
+      msgs.forEach(m => appendChatMsg(m));
+    }
+  });
+});
+
+socket.on('online_users', (users) => {
+  state.onlineCount = users.length;
+  document.getElementById('chat-online-count').textContent = users.length + ' en ligne';
+});
+
+socket.on('leaderboard', (data) => {
+  state.lbData = data;
+  renderLeaderboard();
+});
+
+socket.on('chat_message', (msg) => {
+  appendChatMsg(msg);
+});
+
+function syncStats() {
+  if (!state.userId) return;
+  socket.emit('update_stats', { userId: state.userId, stats: state.stats });
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════════════
+document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+  el.addEventListener('click', () => {
+    const pg = el.dataset.page;
+    navigateTo(pg);
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+function navigateTo(pg) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pg).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${pg}"]`).classList.add('active');
+
+  if (pg === 'leaderboard') {
+    socket.emit('get_leaderboard', (data) => { state.lbData = data; renderLeaderboard(); });
+  }
+  if (pg === 'reference') renderRef();
+  if (pg === 'profile') renderProfile();
+}
+
+// ═══════════════════════════════════════════════════════
+//  QUIZ
+// ═══════════════════════════════════════════════════════
+function startQuiz(mode) {
+  state.quizMode = mode;
+  state.quizStreak = 0;
+  state.quizExp = 0;
+  state.quizActive = true;
+  state.quizAnswered = false;
+  document.getElementById('quiz-mode-label').textContent =
+    (mode === 'hiragana' ? 'HIRAGANA' : 'KATAKANA') + ' — MODE SURVIE';
+  navigateTo('quiz');
+  nextQuestion();
+}
+
+function nextQuestion() {
+  state.quizAnswered = false;
+  const data = state.quizMode === 'hiragana' ? HIRAGANA : KATAKANA;
+  const item = data[Math.floor(Math.random() * data.length)];
+  state.quizCorrect = item.r;
+
+  document.getElementById('quiz-char').textContent = item.c;
+  document.getElementById('quiz-streak').textContent = state.quizStreak;
+  document.getElementById('quiz-exp').textContent = state.quizExp;
+
+  // Build answers: 2 unique wrong
+  const wrongPool = data.filter(x => x.r !== item.r);
+  const shuffledWrong = wrongPool.sort(() => Math.random() - 0.5);
+  const uniqueWrong = [];
+  const seenR = new Set([item.r]);
+  for (const w of shuffledWrong) {
+    if (!seenR.has(w.r)) { seenR.add(w.r); uniqueWrong.push(w.r); }
+    if (uniqueWrong.length >= 2) break;
+  }
+
+  const answers = [item.r, ...uniqueWrong].sort(() => Math.random() - 0.5);
+
+  const grid = document.getElementById('quiz-answers');
+  grid.innerHTML = '';
+  answers.forEach(ans => {
+    const btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.textContent = ans;
+    btn.addEventListener('click', () => { if (!state.quizAnswered) checkAnswer(ans, btn); });
+    grid.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(state.quizTimer);
+  state.quizTimerVal = 5;
+  updateTimerDisplay();
+
+  state.quizTimer = setInterval(() => {
+    state.quizTimerVal--;
+    updateTimerDisplay();
+    if (state.quizTimerVal <= 0) {
+      clearInterval(state.quizTimer);
+      if (!state.quizAnswered) timedOut();
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('quiz-timer');
+  el.textContent = Math.max(0, state.quizTimerVal);
+  el.classList.toggle('timer-low', state.quizTimerVal <= 2);
+}
+
+function checkAnswer(ans, btn) {
+  if (state.quizAnswered) return;
+  state.quizAnswered = true;
+  clearInterval(state.quizTimer);
+
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+
+  const correct = ans === state.quizCorrect;
+
+  if (correct) {
+    btn.classList.add('correct');
+    state.quizStreak++;
+    state.quizExp += 10;
+    state.stats.totalQuestions++;
+    state.stats.correctAnswers++;
+    state.stats.exp += 10;
+
+    if (state.quizMode === 'hiragana') {
+      state.stats.maxStreakHira = Math.max(state.stats.maxStreakHira, state.quizStreak);
+    } else {
+      state.stats.maxStreakKata = Math.max(state.stats.maxStreakKata, state.quizStreak);
     }
 
-    function addFriend(userId, username, maxStreak, exp) {
-      if (!state.friends.find(f => f.id === userId)) {
-        state.friends.push({ id: userId, username, maxStreak, exp });
-        socket.emit('add_friend', state.userId, userId);
-        saveState();
-        renderOnlineUsers();
-        renderFriends();
+    document.getElementById('quiz-streak').textContent = state.quizStreak;
+    document.getElementById('quiz-exp').textContent = state.quizExp;
+
+    saveLocal();
+    syncStats();
+
+    setTimeout(() => nextQuestion(), 650);
+  } else {
+    btn.classList.add('wrong');
+    // highlight correct
+    document.querySelectorAll('.ans-btn').forEach(b => {
+      if (b.textContent === state.quizCorrect) b.classList.add('correct');
+    });
+    flashWrong();
+    state.stats.totalQuestions++;
+    saveLocal();
+    syncStats();
+    setTimeout(() => showGameOver(), 1000);
+  }
+}
+
+function timedOut() {
+  if (state.quizAnswered) return;
+  state.quizAnswered = true;
+  document.querySelectorAll('.ans-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === state.quizCorrect) b.classList.add('correct');
+    else b.classList.add('wrong');
+  });
+  flashWrong();
+  state.stats.totalQuestions++;
+  saveLocal();
+  syncStats();
+  setTimeout(() => showGameOver(), 1000);
+}
+
+function flashWrong() {
+  const el = document.getElementById('flash-overlay');
+  el.classList.remove('wrong-flash');
+  void el.offsetWidth; // reflow
+  el.classList.add('wrong-flash');
+  setTimeout(() => el.classList.remove('wrong-flash'), 500);
+}
+
+function showGameOver() {
+  clearInterval(state.quizTimer);
+  state.quizActive = false;
+
+  document.getElementById('go-streak').textContent = state.quizStreak;
+  document.getElementById('go-exp').textContent = state.quizExp;
+  document.getElementById('gameover-overlay').classList.add('show');
+}
+
+function restartQuiz() {
+  document.getElementById('gameover-overlay').classList.remove('show');
+  startQuiz(state.quizMode);
+}
+
+function quitToMenu() {
+  clearInterval(state.quizTimer);
+  document.getElementById('gameover-overlay').classList.remove('show');
+  navigateTo('home');
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════════════════════
+let lbCurrentMode = 'total';
+
+function switchLb(mode, btn) {
+  lbCurrentMode = mode;
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const headers = { total:'Score Total', exp:'EXP', hira:'Streak Hiragana', kata:'Streak Katakana' };
+  document.getElementById('lb-col-header').textContent = headers[lbCurrentMode];
+
+  const sorted = [...state.lbData].sort((a, b) => {
+    if (lbCurrentMode === 'total') return b.totalScore - a.totalScore;
+    if (lbCurrentMode === 'exp') return b.exp - a.exp;
+    if (lbCurrentMode === 'hira') return b.maxStreakHira - a.maxStreakHira;
+    if (lbCurrentMode === 'kata') return b.maxStreakKata - a.maxStreakKata;
+    return 0;
+  });
+
+  const tbody = document.getElementById('lb-body');
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:40px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:12px">Aucun joueur encore...</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = sorted.map((u, i) => {
+    const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1);
+    const value = lbCurrentMode === 'total' ? u.totalScore
+      : lbCurrentMode === 'exp' ? u.exp
+      : lbCurrentMode === 'hira' ? u.maxStreakHira
+      : u.maxStreakKata;
+    const isSelf = u.id === state.userId;
+
+    return `<tr onclick="openProfileModal('${u.id}')" style="${isSelf ? 'background:rgba(79,142,247,0.06)' : ''}">
+      <td><span class="lb-rank ${rankClass}">${rankLabel}</span></td>
+      <td>
+        <div class="lb-user">
+          <div class="lb-avatar" style="background:${u.color || '#4f8ef7'}">${(u.username||'?')[0].toUpperCase()}</div>
+          <span class="lb-username">${escHtml(u.username)}${isSelf ? ' <span style="color:var(--accent);font-size:11px">(toi)</span>' : ''}</span>
+          ${u.online ? '<span class="lb-online"></span>' : ''}
+        </div>
+      </td>
+      <td><span class="lb-value">${value}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROFILE MODAL (view others)
+// ═══════════════════════════════════════════════════════
+function openProfileModal(userId) {
+  socket.emit('get_profile', userId, (data) => {
+    if (!data) return;
+    const stats = data.stats || {};
+    const total = (stats.exp || 0) + (stats.maxStreakHira || 0) * 5 + (stats.maxStreakKata || 0) * 5;
+
+    document.getElementById('pm-avatar').textContent = (data.username || '?')[0].toUpperCase();
+    document.getElementById('pm-avatar').style.background = data.color || '#4f8ef7';
+    document.getElementById('pm-name').textContent = data.username || '?';
+    document.getElementById('pm-badge').textContent = data.online ? '🟢 En ligne' : '⚫ Hors ligne';
+    document.getElementById('pm-exp').textContent = stats.exp || 0;
+    document.getElementById('pm-total').textContent = total;
+    document.getElementById('pm-hira').textContent = stats.maxStreakHira || 0;
+    document.getElementById('pm-kata').textContent = stats.maxStreakKata || 0;
+    document.getElementById('profile-modal').classList.add('show');
+  });
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.remove('show');
+}
+
+document.getElementById('profile-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('profile-modal')) closeProfileModal();
+});
+
+// ═══════════════════════════════════════════════════════
+//  MY PROFILE
+// ═══════════════════════════════════════════════════════
+function renderProfile() {
+  document.getElementById('profile-username-input').value = state.username;
+  document.getElementById('profile-name-display').textContent = state.username;
+  document.getElementById('profile-id-display').textContent = state.userId ? 'ID: ' + state.userId : '';
+  document.getElementById('profile-avatar').textContent = state.username[0].toUpperCase();
+  document.getElementById('profile-avatar').style.background = state.color;
+  document.getElementById('prof-exp').textContent = state.stats.exp;
+  document.getElementById('prof-questions').textContent = state.stats.totalQuestions;
+  document.getElementById('prof-hira').textContent = state.stats.maxStreakHira;
+  document.getElementById('prof-kata').textContent = state.stats.maxStreakKata;
+
+  // Color swatches
+  const picker = document.getElementById('color-picker');
+  picker.innerHTML = COLORS.map(c =>
+    `<div class="color-swatch ${c === state.color ? 'selected' : ''}" style="background:${c}" onclick="pickColor('${c}',this)"></div>`
+  ).join('');
+}
+
+function pickColor(c, el) {
+  state.color = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('profile-avatar').style.background = c;
+}
+
+function saveProfile() {
+  const newName = document.getElementById('profile-username-input').value.trim();
+  if (!newName) { showToast('Le pseudo ne peut pas être vide !'); return; }
+  state.username = newName.substring(0, 20);
+
+  if (state.userId) {
+    socket.emit('update_profile', {
+      userId: state.userId,
+      username: state.username,
+      color: state.color
+    }, (res) => {
+      if (res && res.ok) {
+        saveLocal();
+        renderProfile();
+        showToast('Profil sauvegardé ✓');
       }
-    }
+    });
+  } else {
+    saveLocal();
+    renderProfile();
+    showToast('Profil sauvegardé ✓');
+  }
+}
 
-    // PROFILE
-    function updateProfile() {
-      document.getElementById('profileName').textContent = state.username;
-      document.getElementById('profileAvatar').textContent = state.username[0];
-      document.getElementById('friendsCount').textContent = `Amis: ${state.friends.length}`;
-      document.getElementById('maxHira').textContent = state.maxStreakHira;
-      document.getElementById('maxKata').textContent = state.maxStreakKata;
-      document.getElementById('totalExp').textContent = state.exp;
-      document.getElementById('totalQuestions').textContent = state.totalQuestions;
-    }
+// ═══════════════════════════════════════════════════════
+//  REFERENCE
+// ═══════════════════════════════════════════════════════
+function switchRef(mode, btn) {
+  state.refMode = mode;
+  document.querySelectorAll('.ref-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderRef();
+}
 
-    function updateStats() {
-      document.getElementById('streak').textContent = state.streak;
-      updateProfile();
-    }
+function renderRef() {
+  const data = state.refMode === 'hiragana' ? HIRAGANA : KATAKANA;
+  document.getElementById('ref-grid').innerHTML = data.map(x =>
+    `<div class="char-card"><div class="char-jp">${x.c}</div><div class="char-rom">${x.r}</div></div>`
+  ).join('');
+}
 
-    // NAV
-    function setupNav() {
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const page = item.dataset.page;
-          document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-          document.getElementById(page).classList.add('active');
-          document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-          item.classList.add('active');
+// ═══════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !state.userId) return;
+  socket.emit('chat_message', { userId: state.userId, text });
+  input.value = '';
+}
 
-          if (page === 'online') renderOnlineUsers();
-          if (page === 'friends') renderFriends();
-        });
-      });
-    }
+function appendChatMsg(msg) {
+  const container = document.getElementById('chat-messages');
+  const isMine = msg.userId === state.userId;
+  const time = new Date(msg.ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-    function setupModes() {
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          state.mode = btn.dataset.mode;
-          newQuestion();
-        });
-      });
-    }
+  const el = document.createElement('div');
+  el.className = 'chat-msg' + (isMine ? ' mine' : '');
+  el.innerHTML = `
+    <div class="chat-avatar" style="background:${msg.color || '#4f8ef7'}">${(msg.username||'?')[0].toUpperCase()}</div>
+    <div class="chat-bubble-wrap">
+      <div class="chat-user" style="color:${msg.color||'#4f8ef7'}">${escHtml(msg.username)} <span class="chat-time">${time}</span></div>
+      <div class="chat-bubble${isMine ? ' mine' : ''}">${escHtml(msg.text)}</div>
+    </div>
+  `;
+  container.appendChild(el);
 
-    // MOBILE
-    if (window.innerWidth <= 768) {
-      const menuBtn = document.createElement('button');
-      menuBtn.textContent = '☰';
-      menuBtn.style.cssText = 'position: fixed; top: 20px; left: 20px; z-index: 999; padding: 10px 15px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;';
-      menuBtn.onclick = () => document.getElementById('sidebar').classList.toggle('active');
-      document.body.appendChild(menuBtn);
-    }
+  // Auto scroll
+  container.scrollTop = container.scrollHeight;
 
-    // AUTO SAVE
-    setInterval(saveState, 10000);
-  </script>
+  // Limit DOM messages
+  while (container.children.length > 100) container.removeChild(container.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+renderRef();
+renderProfile();
+
+// Hide mobile menu on desktop
+if (window.innerWidth > 768) {
+  document.getElementById('mobile-menu').style.display = 'none';
+}
+</script>
 </body>
 </html>
