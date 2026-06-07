@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日本語 Jeux</title>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <title>日本語 - Apprendre</title>
   <style>
     * {
       margin: 0;
@@ -19,61 +18,154 @@
       --dark: #000000;
       --light: #ffffff;
       --gray: #f3f4f6;
-      --gray-dark: #1f2937;
       --text: #111827;
+      --text-light: #6b7280;
     }
 
-    body {
-      font-family: 'Inter', sans-serif;
+    html, body {
+      width: 100%;
+      height: 100%;
       background: var(--light);
+      font-family: 'Inter', sans-serif;
       color: var(--text);
-      overflow: hidden;
     }
 
     .app {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+    }
+
+    .page {
+      display: none;
+      flex: 1;
+    }
+
+    .page.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* LOGIN PAGE */
+    .login-page {
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      padding: 20px;
+    }
+
+    .login-box {
+      background: var(--light);
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .login-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--gray);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: var(--gray);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
     }
 
     /* HEADER */
     .header {
       background: var(--dark);
       color: var(--light);
-      padding: 20px 40px;
+      padding: 15px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 2px solid var(--primary);
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 30px;
-    }
-
     .logo {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 700;
-      letter-spacing: 2px;
     }
 
     .nav-buttons {
       display: flex;
-      gap: 15px;
+      gap: 10px;
     }
 
     .nav-btn {
-      padding: 10px 20px;
-      border: none;
+      padding: 8px 16px;
       background: transparent;
       color: var(--light);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
+      border: 2px solid transparent;
       border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
       transition: all 0.2s;
       font-family: inherit;
     }
@@ -86,299 +178,266 @@
       background: var(--primary);
     }
 
-    .sort-btn {
-      padding: 10px 20px;
-      border: 2px solid #e5e7eb;
-      background: var(--light);
-      color: var(--text);
+    .user-info {
+      font-size: 13px;
+    }
+
+    .logout-btn {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--light);
+      border: 1px solid var(--light);
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: var(--light);
+      color: var(--dark);
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* LEADERBOARD */
+    .leaderboard-page {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .leaderboard-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .category-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .cat-btn {
+      padding: 10px 20px;
+      border: 2px solid var(--primary);
+      background: var(--light);
+      color: var(--primary);
       border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
       transition: all 0.2s;
       font-family: inherit;
     }
 
-    .sort-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    .sort-btn.active {
+    .cat-btn.active {
       background: var(--primary);
       color: white;
-      border-color: var(--primary);
     }
 
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+    .cat-btn:hover {
+      background: var(--primary);
+      color: white;
     }
 
-    .user-profile-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: transparent;
-      border: none;
-      color: var(--light);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-
-    .user-profile-btn:hover {
-      opacity: 0.8;
-    }
-
-    .avatar-small {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    /* MAIN */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 40px;
-    }
-
-    .page {
-      display: none;
-    }
-
-    .page.active {
-      display: block;
-    }
-
-    /* LEADERBOARD PAGE */
     .leaderboard-table {
-      background: var(--light);
+      background: white;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
-    .leaderboard-header {
+    .table-header {
       background: var(--dark);
-      color: var(--light);
-      padding: 20px;
+      color: white;
+      padding: 15px;
       display: grid;
-      grid-template-columns: 50px 1fr 120px 120px 120px;
-      gap: 20px;
+      grid-template-columns: 50px 1fr 120px;
+      gap: 15px;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
-    .leaderboard-row {
-      padding: 20px;
+    .table-row {
+      padding: 15px;
       display: grid;
-      grid-template-columns: 50px 1fr 120px 120px 120px;
-      gap: 20px;
+      grid-template-columns: 50px 1fr 120px;
+      gap: 15px;
       border-bottom: 1px solid #e5e7eb;
       align-items: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .leaderboard-row:hover {
-      background: var(--gray);
     }
 
     .rank {
       font-weight: 700;
-      font-size: 16px;
       color: var(--primary);
+      font-size: 16px;
     }
 
-    .player-info {
+    .player-cell {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 12px;
     }
 
-    .avatar-medium {
-      width: 50px;
-      height: 50px;
+    .avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      color: white;
       font-weight: 700;
-      color: var(--light);
-    }
-
-    .player-name {
-      font-weight: 600;
-      font-size: 14px;
+      flex-shrink: 0;
     }
 
     .stat-cell {
       text-align: center;
       font-weight: 600;
+      font-size: 14px;
     }
 
-    /* MINI GAMES PAGE */
-    .games-grid {
+    /* GAMES PAGE */
+    .games-page {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .games-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 30px;
+    }
+
+    .game-selection {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      max-width: 700px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
     }
 
     .game-card {
-      background: var(--light);
+      background: white;
       border: 2px solid var(--dark);
       border-radius: 12px;
-      padding: 40px;
+      padding: 30px;
       text-align: center;
       transition: all 0.3s;
     }
 
     .game-card:hover {
       border-color: var(--primary);
-      box-shadow: 0 8px 16px rgba(22, 163, 74, 0.15);
+      box-shadow: 0 8px 16px rgba(22, 163, 74, 0.1);
     }
 
     .game-icon {
       font-size: 48px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
-    .game-title {
-      font-size: 22px;
+    .game-name {
+      font-size: 18px;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
 
-    .game-desc {
-      font-size: 13px;
-      color: #6b7280;
-      margin-bottom: 30px;
+    .difficulty-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .btn-start {
-      width: 100%;
-      padding: 14px;
+    .diff-btn {
+      padding: 10px;
       background: var(--primary);
-      color: var(--light);
+      color: white;
       border: none;
       border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 600;
       font-family: inherit;
+      transition: all 0.2s;
     }
 
-    .btn-start:hover {
+    .diff-btn:hover {
       opacity: 0.9;
-      transform: translateY(-2px);
     }
 
-    /* GAME PLAY PAGE */
-    .game-play {
+    /* GAMEPLAY */
+    .gameplay-page {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
-      gap: 50px;
+      min-height: 100%;
+      gap: 40px;
     }
 
-    .game-header {
+    .game-info {
       display: flex;
-      gap: 80px;
+      gap: 60px;
       align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
-    .streak-box {
+    .streak-info {
       text-align: center;
     }
 
     .streak-label {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--text-light);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
       font-weight: 600;
+      margin-bottom: 8px;
     }
 
-    .streak-display {
-      display: flex;
-      align-items: center;
-      gap: 15px;
+    .streak-value {
       font-size: 48px;
       font-weight: 700;
-    }
-
-    .plant {
-      font-size: 56px;
-      animation: plantGrow 0.5s ease;
-    }
-
-    @keyframes plantGrow {
-      0% { transform: scale(0.8); }
-      100% { transform: scale(1); }
-    }
-
-    .multiplier {
       color: var(--primary);
-      font-size: 32px;
     }
 
-    .timer-box {
-      text-align: center;
-    }
-
-    .timer-bar-container {
-      width: 280px;
-      height: 8px;
-      background: #e5e7eb;
-      border-radius: 4px;
-      overflow: hidden;
-      margin: 20px 0;
+    .character {
+      font-size: 100px;
+      font-weight: 700;
+      line-height: 1;
+      min-height: 120px;
     }
 
     .timer-bar {
+      width: 280px;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .timer-fill {
       height: 100%;
       background: var(--primary);
-      animation: timerFill 5s linear forwards;
-      opacity: 0;
-      animation: timerBar 5s linear forwards;
+      animation: timerAnim 5s linear forwards;
     }
 
-    @keyframes timerBar {
-      0% { 
-        width: 100%;
-        opacity: 1;
-      }
-      100% { 
-        width: 0%;
-        opacity: 0;
-      }
+    @keyframes timerAnim {
+      to { width: 0; }
     }
 
-    .character-display {
-      font-size: 120px;
-      font-weight: 700;
-      line-height: 1;
-      min-height: 140px;
-    }
-
-    .answers-grid {
+    /* EASY MODE - CHOICES */
+    .choices {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 15px;
@@ -386,67 +445,140 @@
       max-width: 600px;
     }
 
-    .answer-choice {
-      padding: 18px;
-      background: var(--gray);
-      border: 2px solid #d1d5db;
+    .choice-btn {
+      padding: 16px;
+      background: white;
+      border: 2px solid #e5e7eb;
       border-radius: 8px;
+      cursor: pointer;
       font-size: 16px;
       font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
       font-family: inherit;
     }
 
-    .answer-choice:hover:not(:disabled) {
+    .choice-btn:hover:not(:disabled) {
       border-color: var(--primary);
-      background: var(--light);
+      color: var(--primary);
     }
 
-    .answer-choice:disabled {
+    .choice-btn.correct {
+      border-color: var(--primary);
+      background: #dcfce7;
+      color: var(--primary);
+    }
+
+    .choice-btn.wrong {
+      border-color: #ef4444;
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .choice-btn:disabled {
       cursor: not-allowed;
       opacity: 0.6;
     }
 
-    /* GAME OVER PAGE */
-    .game-over-screen {
+    /* HARD MODE - INPUT */
+    .input-area {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .answer-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    .answer-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .submit-btn {
+      padding: 12px 24px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .submit-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* ANSWER REVEAL */
+    .answer-reveal {
+      padding: 20px;
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .answer-label {
+      font-size: 12px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .answer-text {
+      font-size: 24px;
+      font-weight: 700;
+      color: #d97706;
+    }
+
+    /* GAME OVER */
+    .gameover-page {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
-      gap: 40px;
+      min-height: 100%;
+      gap: 30px;
     }
 
-    .game-over-title {
-      font-size: 36px;
+    .gameover-title {
+      font-size: 32px;
       font-weight: 700;
-      color: var(--dark);
     }
 
-    .game-over-stats {
-      background: var(--gray);
+    .stats-box {
+      background: white;
+      border: 2px solid var(--dark);
       border-radius: 12px;
-      padding: 40px;
+      padding: 30px;
       text-align: center;
       min-width: 300px;
     }
 
-    .stat-row {
+    .stat-item {
       margin-bottom: 20px;
     }
 
-    .stat-row:last-child {
+    .stat-item:last-child {
       margin-bottom: 0;
     }
 
     .stat-label {
-      font-size: 13px;
-      color: #6b7280;
+      font-size: 12px;
+      color: var(--text-light);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 5px;
       font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .stat-value {
@@ -455,25 +587,25 @@
       color: var(--primary);
     }
 
-    .game-over-buttons {
+    .gameover-buttons {
       display: flex;
-      gap: 15px;
+      gap: 10px;
     }
 
-    .btn-game {
-      padding: 14px 32px;
+    .gameover-btn {
+      padding: 12px 24px;
       border: none;
       border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
       font-family: inherit;
+      transition: all 0.2s;
     }
 
     .btn-restart {
       background: var(--primary);
-      color: var(--light);
+      color: white;
     }
 
     .btn-restart:hover {
@@ -481,378 +613,180 @@
     }
 
     .btn-quit {
-      background: var(--gray-dark);
-      color: var(--light);
-    }
-
-    .btn-quit:hover {
-      opacity: 0.8;
-    }
-
-    /* PROFILE MODAL */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: var(--light);
-      border-radius: 12px;
-      padding: 40px;
-      max-width: 500px;
-      width: 90%;
-      position: relative;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
+      background: var(--gray);
       color: var(--text);
     }
 
-    .profile-header {
-      text-align: center;
-      margin-bottom: 30px;
+    .btn-quit:hover {
+      background: #e5e7eb;
     }
 
-    .avatar-large {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 40px;
-      color: var(--light);
-      font-weight: 700;
-      margin: 0 auto 20px;
-    }
-
-    .profile-name {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-    }
-
-    .stat-box {
-      background: var(--gray);
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .stat-box-label {
-      font-size: 11px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .stat-box-value {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    /* SETTINGS MODAL */
-    .settings-modal .modal-content {
-      max-width: 450px;
-    }
-
-    .settings-group {
-      margin-bottom: 25px;
-    }
-
-    .settings-label {
-      font-size: 13px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      font-weight: 600;
-      display: block;
-    }
-
-    .input-field {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
-      transition: all 0.2s;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
-    }
-
-    .color-picker {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .color-option {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .color-option.selected {
-      border-color: var(--dark);
-      transform: scale(1.1);
-    }
-
-    .btn-save {
-      width: 100%;
-      padding: 12px;
-      background: var(--primary);
-      color: var(--light);
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-      margin-top: 20px;
-    }
-
-    .btn-save:hover {
-      opacity: 0.9;
-    }
-
+    /* RESPONSIVE */
     @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        gap: 15px;
-        padding: 15px 20px;
+      .login-box {
+        padding: 30px 20px;
       }
 
-      .header-left {
+      .header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .nav-buttons {
         width: 100%;
-        justify-content: space-between;
+        flex-wrap: wrap;
       }
 
       .main {
-        padding: 20px;
+        padding: 15px;
       }
 
-      .game-header {
+      .game-info {
         gap: 30px;
       }
 
-      .character-display {
+      .character {
         font-size: 80px;
       }
 
-      .answers-grid {
+      .choices {
         grid-template-columns: 1fr;
       }
 
-      .leaderboard-header,
-      .leaderboard-row {
-        grid-template-columns: 40px 1fr 80px 80px 80px;
-        font-size: 12px;
+      .game-selection {
+        grid-template-columns: 1fr;
+      }
+
+      .table-header, .table-row {
+        grid-template-columns: 40px 1fr 100px;
+      }
+
+      .input-area {
+        flex-direction: column;
       }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- HEADER -->
-    <div class="header">
-      <div class="header-left">
-        <div class="logo">日本語</div>
-        <div class="nav-buttons">
-          <button class="nav-btn active" data-page="leaderboard">📊 Leaderboard</button>
-          <button class="nav-btn" data-page="games">🎮 Mini-jeux</button>
+    <!-- LOGIN PAGE -->
+    <div class="page login-page active">
+      <div class="login-box">
+        <div class="login-title">日本語</div>
+        <div class="form-group">
+          <label class="form-label">Pseudo</label>
+          <input type="text" class="form-input" id="usernameInput" placeholder="Ton pseudo">
         </div>
-      </div>
-      <div class="header-right">
-        <button class="user-profile-btn" id="userBtn">
-          <div class="avatar-small" id="userAvatar">A</div>
-          <span id="userName">Joueur</span>
-        </button>
+        <div class="form-group">
+          <label class="form-label">Mot de passe</label>
+          <input type="password" class="form-input" id="passwordInput" placeholder="Ton mot de passe">
+        </div>
+        <div class="form-buttons">
+          <button class="btn btn-primary" onclick="register()">S'inscrire</button>
+          <button class="btn btn-secondary" onclick="login()">Se connecter</button>
+        </div>
       </div>
     </div>
 
-    <!-- MAIN -->
-    <div class="main">
-      <!-- LEADERBOARD PAGE -->
-      <div id="leaderboard" class="page active">
-        <h1 style="margin-bottom: 30px; font-size: 28px; font-weight: 700;">Classement</h1>
-        
-        <div style="display: flex; gap: 15px; margin-bottom: 30px;">
-          <button class="sort-btn active" data-sort="exp" onclick="changeSortLeaderboard('exp')">💰 EXP</button>
-          <button class="sort-btn" data-sort="hiragana" onclick="changeSortLeaderboard('hiragana')">あ Hiragana</button>
-          <button class="sort-btn" data-sort="katakana" onclick="changeSortLeaderboard('katakana')">ア Katakana</button>
-          <button class="sort-btn" onclick="showMyProfile()" style="margin-left: auto;">👤 Mon Profile</button>
+    <!-- MAIN APP (après login) -->
+    <div id="mainApp" style="display: none; flex: 1; display: flex; flex-direction: column;">
+      <!-- HEADER -->
+      <div class="header">
+        <div class="logo">日本語</div>
+        <div class="nav-buttons">
+          <button class="nav-btn active" onclick="goToPage('leaderboard')">📊 Classement</button>
+          <button class="nav-btn" onclick="goToPage('games')">🎮 Jeux</button>
         </div>
-
-        <div class="leaderboard-table">
-          <div class="leaderboard-header" id="leaderboardHeader">
-            <div>#</div>
-            <div>Joueur</div>
-            <div id="col1" style="display: none;">Hiragana</div>
-            <div id="col2" style="display: none;">Katakana</div>
-            <div id="col3">EXP Total</div>
-          </div>
-          <div id="leaderboardList"></div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div class="user-info" id="userDisplay">Joueur</div>
+          <button class="logout-btn" onclick="logout()">Déconnexion</button>
         </div>
       </div>
 
-      <!-- GAMES PAGE -->
-      <div id="games" class="page">
-        <h1 style="margin-bottom: 40px; font-size: 28px; font-weight: 700;">Choisir un jeu</h1>
-        <div class="games-grid">
-          <div class="game-card">
-            <div class="game-icon">あ</div>
-            <div class="game-title">Hiragana</div>
-            <div class="game-desc">Apprends les hiragana avec ce mini-jeu rapide</div>
-            <button class="btn-start" onclick="startGame('hiragana')">Commencer</button>
+      <!-- CONTENT -->
+      <div class="main">
+        <!-- LEADERBOARD PAGE -->
+        <div class="page leaderboard-page active">
+          <h1 class="leaderboard-title">Classement</h1>
+          <div class="category-buttons">
+            <button class="cat-btn active" onclick="changeCategory('exp')">💰 EXP</button>
+            <button class="cat-btn" onclick="changeCategory('hiragana')">あ Hiragana</button>
+            <button class="cat-btn" onclick="changeCategory('katakana')">ア Katakana</button>
           </div>
-          <div class="game-card">
-            <div class="game-icon">ア</div>
-            <div class="game-title">Katakana</div>
-            <div class="game-desc">Apprends les katakana avec ce mini-jeu rapide</div>
-            <button class="btn-start" onclick="startGame('katakana')">Commencer</button>
+          <div class="leaderboard-table">
+            <div class="table-header">
+              <div>#</div>
+              <div>Joueur</div>
+              <div id="headerStat">EXP Total</div>
+            </div>
+            <div id="leaderboardList"></div>
           </div>
         </div>
-      </div>
 
-      <!-- GAMEPLAY PAGE -->
-      <div id="gameplay" class="page">
-        <div class="game-play">
-          <div class="game-header">
-            <div class="streak-box">
-              <div class="streak-label">Streak</div>
-              <div class="streak-display">
-                <span id="streakCount">0</span>
-                <span class="plant" id="plantEmoji">🌱</span>
+        <!-- GAMES PAGE -->
+        <div class="page games-page">
+          <h1 class="games-title">Choisir un jeu</h1>
+          <div class="game-selection">
+            <div class="game-card">
+              <div class="game-icon">あ</div>
+              <div class="game-name">Hiragana</div>
+              <div class="difficulty-btns">
+                <button class="diff-btn" onclick="startGame('hiragana', 'easy')">Easy</button>
+                <button class="diff-btn" onclick="startGame('hiragana', 'hard')">Difficile</button>
               </div>
             </div>
-            <div class="timer-box">
-              <div class="streak-label">Temps</div>
-              <div class="timer-bar-container">
-                <div class="timer-bar" id="timerBar"></div>
+            <div class="game-card">
+              <div class="game-icon">ア</div>
+              <div class="game-name">Katakana</div>
+              <div class="difficulty-btns">
+                <button class="diff-btn" onclick="startGame('katakana', 'easy')">Easy</button>
+                <button class="diff-btn" onclick="startGame('katakana', 'hard')">Difficile</button>
               </div>
             </div>
           </div>
-
-          <div class="character-display" id="gameCharacter">あ</div>
-
-          <div class="answers-grid" id="gameAnswers"></div>
         </div>
-      </div>
 
-      <!-- GAME OVER PAGE -->
-      <div id="gameover" class="page">
-        <div class="game-over-screen">
-          <div class="game-over-title">Partie Terminée!</div>
-          <div class="game-over-stats">
-            <div class="stat-row">
+        <!-- GAMEPLAY PAGE -->
+        <div class="page" id="gameplayPage">
+          <div class="gameplay-page">
+            <div class="game-info">
+              <div class="streak-info">
+                <div class="streak-label">Streak</div>
+                <div class="streak-value" id="streakDisplay">0</div>
+              </div>
+              <div class="streak-info">
+                <div class="timer-bar">
+                  <div class="timer-fill" id="timerBar"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="character" id="gameCharacter">あ</div>
+
+            <div id="gameContent"></div>
+          </div>
+        </div>
+
+        <!-- GAMEOVER PAGE -->
+        <div class="page gameover-page">
+          <h1 class="gameover-title">Partie Terminée!</h1>
+          <div class="stats-box">
+            <div class="stat-item">
               <div class="stat-label">Streak Final</div>
               <div class="stat-value" id="finalStreak">0</div>
             </div>
-            <div class="stat-row">
+            <div class="stat-item">
               <div class="stat-label">EXP Gagné</div>
               <div class="stat-value" id="finalExp">0</div>
             </div>
           </div>
-          <div class="game-over-buttons">
-            <button class="btn-game btn-restart" onclick="restartGame()">Recommencer</button>
-            <button class="btn-game btn-quit" onclick="quitGame()">Quitter</button>
+          <div class="gameover-buttons">
+            <button class="gameover-btn btn-restart" onclick="restartGame()">Recommencer</button>
+            <button class="gameover-btn btn-quit" onclick="quitGame()">Quitter</button>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- PROFILE MODAL -->
-  <div class="modal" id="profileModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeModal('profileModal')">✕</button>
-      <div class="profile-header">
-        <div class="avatar-large" id="modalAvatar">A</div>
-        <div class="profile-name" id="modalName">Joueur</div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-box">
-          <div class="stat-box-label">Hiragana</div>
-          <div class="stat-box-value" id="modalHira">0</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box-label">Katakana</div>
-          <div class="stat-box-value" id="modalKata">0</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box-label">EXP Total</div>
-          <div class="stat-box-value" id="modalExp">0</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box-label">Parties</div>
-          <div class="stat-box-value" id="modalGames">0</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SETTINGS MODAL -->
-  <div class="modal settings-modal" id="settingsModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeModal('settingsModal')">✕</button>
-      <h2 style="margin-bottom: 30px; font-size: 22px; font-weight: 700;">Paramètres</h2>
-      
-      <div class="settings-group">
-        <label class="settings-label">Pseudo</label>
-        <input type="text" class="input-field" id="pseudoInput" placeholder="Ton pseudo">
-      </div>
-
-      <div class="settings-group">
-        <label class="settings-label">Couleur de profile</label>
-        <div class="color-picker">
-          <div class="color-option selected" style="background: #3b82f6;" data-color="#3b82f6"></div>
-          <div class="color-option" style="background: #ef4444;" data-color="#ef4444"></div>
-          <div class="color-option" style="background: #8b5cf6;" data-color="#8b5cf6"></div>
-          <div class="color-option" style="background: #f59e0b;" data-color="#f59e0b"></div>
-          <div class="color-option" style="background: #16a34a;" data-color="#16a34a"></div>
-          <div class="color-option" style="background: #ec4899;" data-color="#ec4899"></div>
-        </div>
-      </div>
-
-      <button class="btn-save" onclick="saveSettings()">Sauvegarder</button>
     </div>
   </div>
 
@@ -894,309 +828,305 @@
       { char: 'ワ', romaji: 'wa' }, { char: 'ヲ', romaji: 'wo' }, { char: 'ン', romaji: 'n' }
     ];
 
-    const plantEmojis = ['🌱', '🌿', '🍀', '🌾', '🌳'];
-
     // STATE
     let state = {
       userId: null,
-      username: 'Joueur',
-      avatarColor: '#3b82f6',
-      maxStreakHira: 0,
-      maxStreakKata: 0,
-      totalExp: 0,
-      totalGames: 0,
-      currentGameMode: null,
+      username: null,
+      currentGameType: null,
+      currentGameDifficulty: null,
       currentStreak: 0,
       currentExp: 0,
       currentChar: null,
       correctAnswer: null,
       timerRunning: false,
-      timerTimeout: null
+      timerTimeout: null,
+      currentLeaderboardCategory: 'exp'
     };
 
-    const socket = io();
-
-    // INIT
-    async function init() {
+    // LOAD USER FROM SESSION
+    window.addEventListener('load', () => {
       const savedUserId = localStorage.getItem('userId');
-      const res = await fetch('/api/user/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: savedUserId })
-      });
-      const data = await res.json();
-      state.userId = data.userId;
-      localStorage.setItem('userId', state.userId);
-      Object.assign(state, data.user);
+      if (savedUserId) {
+        state.userId = savedUserId;
+        showApp();
+      }
+    });
+
+    // AUTH
+    async function login() {
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
       
-      updateUI();
-      loadLeaderboard();
-      setupEventListeners();
-      socket.emit('user_connect', state.userId);
-    }
-
-    function updateUI() {
-      document.getElementById('userName').textContent = state.username;
-      document.getElementById('userAvatar').style.background = state.avatarColor;
-      document.getElementById('userAvatar').textContent = state.username[0];
-      document.getElementById('pseudoInput').value = state.username;
-      document.querySelectorAll('.color-option').forEach(opt => {
-        opt.classList.toggle('selected', opt.dataset.color === state.avatarColor);
-      });
-    }
-
-    let currentLeaderboardSort = 'exp';
-
-    async function loadLeaderboard(sortBy = 'exp') {
-      currentLeaderboardSort = sortBy;
-      const res = await fetch('/api/leaderboard');
-      let leaderboard = await res.json();
-
-      // Configurer l'affichage des colonnes
-      const col1 = document.getElementById('col1');
-      const col2 = document.getElementById('col2');
-      const col3 = document.getElementById('col3');
-
-      if (sortBy === 'hiragana') {
-        leaderboard.sort((a, b) => b.maxStreakHira - a.maxStreakHira);
-        col1.style.display = 'none';
-        col2.style.display = 'none';
-        col3.style.display = 'block';
-        col3.textContent = 'Hiragana';
-      } else if (sortBy === 'katakana') {
-        leaderboard.sort((a, b) => b.maxStreakKata - a.maxStreakKata);
-        col1.style.display = 'none';
-        col2.style.display = 'none';
-        col3.style.display = 'block';
-        col3.textContent = 'Katakana';
-      } else {
-        leaderboard.sort((a, b) => b.totalExp - a.totalExp);
-        col1.style.display = 'none';
-        col2.style.display = 'none';
-        col3.style.display = 'block';
-        col3.textContent = 'EXP Total';
+      if (!username || !password) {
+        alert('Remplis les deux champs!');
+        return;
       }
 
-      const list = document.getElementById('leaderboardList');
-      list.innerHTML = leaderboard.map((player, idx) => {
-        let stat3;
-        
-        if (sortBy === 'hiragana') {
-          stat3 = player.maxStreakHira;
-        } else if (sortBy === 'katakana') {
-          stat3 = player.maxStreakKata;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          state.userId = data.userId;
+          state.username = data.username;
+          localStorage.setItem('userId', state.userId);
+          showApp();
         } else {
-          stat3 = player.totalExp;
+          alert(data.error || 'Erreur de connexion');
         }
+      } catch (e) {
+        alert('Erreur: ' + e.message);
+      }
+    }
 
-        return `
-          <div class="leaderboard-row" onclick="showProfile('${player.id}')">
+    function register() {
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+      
+      if (!username || !password) {
+        alert('Remplis les deux champs!');
+        return;
+      }
+
+      login();
+    }
+
+    function logout() {
+      state.userId = null;
+      state.username = null;
+      localStorage.removeItem('userId');
+      document.querySelector('.login-page').classList.add('active');
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('usernameInput').value = '';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    function showApp() {
+      document.querySelector('.login-page').classList.remove('active');
+      document.getElementById('mainApp').style.display = 'flex';
+      document.getElementById('userDisplay').textContent = state.username;
+      loadLeaderboard();
+    }
+
+    // LEADERBOARD
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch(`/api/leaderboard/${state.currentLeaderboardCategory}`);
+        const data = await res.json();
+        
+        const list = document.getElementById('leaderboardList');
+        list.innerHTML = data.map((player, idx) => `
+          <div class="table-row">
             <div class="rank">${idx + 1}</div>
-            <div class="player-info">
-              <div class="avatar-medium" style="background: ${player.avatarColor}">${player.username[0]}</div>
-              <div class="player-name">${player.username}</div>
+            <div class="player-cell">
+              <div class="avatar">${player.username[0].toUpperCase()}</div>
+              <div>${player.username}</div>
             </div>
-            <div class="stat-cell">${stat3}</div>
+            <div class="stat-cell">
+              ${state.currentLeaderboardCategory === 'hiragana' ? player.maxStreakHira :
+                state.currentLeaderboardCategory === 'katakana' ? player.maxStreakKata :
+                player.totalExp}
+            </div>
           </div>
-        `;
-      }).join('');
+        `).join('');
+      } catch (e) {
+        console.error('Erreur leaderboard:', e);
+      }
     }
 
-    function changeSortLeaderboard(sortBy) {
-      document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelector(`[data-sort="${sortBy}"]`).classList.add('active');
-      loadLeaderboard(sortBy);
+    function changeCategory(cat) {
+      state.currentLeaderboardCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      const labels = { exp: 'EXP Total', hiragana: 'Hiragana', katakana: 'Katakana' };
+      document.getElementById('headerStat').textContent = labels[cat];
+      
+      loadLeaderboard();
     }
 
-    function showMyProfile() {
-      showProfile(state.userId);
-    }
-
-    async function showProfile(userId) {
-      const res = await fetch(`/api/user/${userId}`);
-      const user = await res.json();
-      document.getElementById('modalAvatar').style.background = user.avatarColor;
-      document.getElementById('modalAvatar').textContent = user.username[0];
-      document.getElementById('modalName').textContent = user.username;
-      document.getElementById('modalHira').textContent = user.maxStreakHira;
-      document.getElementById('modalKata').textContent = user.maxStreakKata;
-      document.getElementById('modalExp').textContent = user.totalExp;
-      document.getElementById('modalGames').textContent = user.totalGames;
-      openModal('profileModal');
-    }
-
-    function setupEventListeners() {
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          // Bloquer la nav pendant le jeu
-          if (state.timerRunning) {
-            alert('Tu dois finir la partie d\'abord!');
-            return;
-          }
-          document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          switchPage(btn.dataset.page);
-        });
-      });
-
-      document.getElementById('userBtn').addEventListener('click', () => openModal('settingsModal'));
-      document.querySelectorAll('.color-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-          document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-          state.avatarColor = opt.dataset.color;
-        });
-      });
-    }
-
-    function switchPage(page) {
+    // GAMES
+    function goToPage(page) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById(page).classList.add('active');
-      if (page === 'leaderboard') loadLeaderboard();
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      
+      if (page === 'leaderboard') {
+        document.querySelector('.leaderboard-page').classList.add('active');
+        document.querySelectorAll('.nav-btn')[0].classList.add('active');
+        loadLeaderboard();
+      } else {
+        document.querySelector('.games-page').classList.add('active');
+        document.querySelectorAll('.nav-btn')[1].classList.add('active');
+      }
     }
 
-    function startGame(mode) {
-      state.currentGameMode = mode;
+    function startGame(type, difficulty) {
+      state.currentGameType = type;
+      state.currentGameDifficulty = difficulty;
       state.currentStreak = 0;
       state.currentExp = 0;
-      switchPage('gameplay');
+      
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('gameplayPage').classList.add('active');
+      
       nextQuestion();
     }
 
     function nextQuestion() {
       if (state.timerRunning) return;
       
-      const data = state.currentGameMode === 'hiragana' ? hiraganaData : katakanaData;
+      const data = state.currentGameType === 'hiragana' ? hiraganaData : katakanaData;
       const item = data[Math.floor(Math.random() * data.length)];
       state.currentChar = item.char;
       state.correctAnswer = item.romaji;
-
-      document.getElementById('gameCharacter').textContent = state.currentChar;
       
-      const wrong = data.filter(x => x.romaji !== state.correctAnswer)
-        .sort(() => Math.random() - 0.5).slice(0, 2).map(x => x.romaji);
-      const answers = [state.correctAnswer, ...wrong].sort(() => Math.random() - 0.5);
-
-      const grid = document.getElementById('gameAnswers');
-      grid.innerHTML = answers.map(ans => 
-        `<button class="answer-choice" onclick="answer('${ans}')">${ans}</button>`
-      ).join('');
-
-      updatePlant();
+      document.getElementById('gameCharacter').textContent = state.currentChar;
+      document.getElementById('streakDisplay').textContent = state.currentStreak;
+      
+      const content = document.getElementById('gameContent');
+      
+      if (state.currentGameDifficulty === 'easy') {
+        // 3 choix
+        const wrong = data.filter(x => x.romaji !== state.correctAnswer)
+          .sort(() => Math.random() - 0.5).slice(0, 2).map(x => x.romaji);
+        const answers = [state.correctAnswer, ...wrong].sort(() => Math.random() - 0.5);
+        
+        content.innerHTML = `
+          <div class="choices">
+            ${answers.map(ans => `<button class="choice-btn" onclick="easyAnswer('${ans}')">${ans}</button>`).join('')}
+          </div>
+        `;
+      } else {
+        // Input texte
+        content.innerHTML = `
+          <div class="input-area">
+            <input type="text" class="answer-input" id="hardInput" placeholder="Tape la réponse" autofocus>
+            <button class="submit-btn" onclick="hardAnswer()">Valider</button>
+          </div>
+        `;
+        document.getElementById('hardInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') hardAnswer();
+        });
+      }
+      
       startTimer();
     }
 
-    function answer(ans) {
+    function easyAnswer(ans) {
       if (!state.timerRunning) return;
       state.timerRunning = false;
+      clearTimeout(state.timerTimeout);
       
       if (ans === state.correctAnswer) {
         state.currentStreak++;
-        state.currentExp += 10;
-        document.querySelectorAll('.answer-choice').forEach(btn => btn.disabled = true);
-        setTimeout(() => nextQuestion(), 100);
+        if (state.currentStreak >= 5) {
+          state.currentExp += 10;
+        }
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        setTimeout(() => nextQuestion(), 600);
       } else {
-        endGame();
+        endGame(true);
+      }
+    }
+
+    function hardAnswer() {
+      if (!state.timerRunning) return;
+      const input = document.getElementById('hardInput').value.trim().toLowerCase();
+      state.timerRunning = false;
+      clearTimeout(state.timerTimeout);
+      
+      if (input === state.correctAnswer) {
+        state.currentStreak++;
+        if (state.currentStreak >= 5) {
+          state.currentExp += 10;
+        }
+        document.getElementById('hardInput').disabled = true;
+        document.querySelector('.submit-btn').disabled = true;
+        setTimeout(() => nextQuestion(), 600);
+      } else {
+        endGame(false, input);
       }
     }
 
     function startTimer() {
-      // Clear le timer précédent s'il existe
-      if (state.timerTimeout) {
-        clearTimeout(state.timerTimeout);
-      }
-      
       state.timerRunning = true;
-      document.getElementById('timerBar').style.animation = 'none';
+      const bar = document.getElementById('timerBar');
+      bar.style.animation = 'none';
       setTimeout(() => {
-        document.getElementById('timerBar').style.animation = 'timerBar 5s linear forwards';
+        bar.style.animation = 'timerAnim 5s linear forwards';
       }, 10);
       
-      // Sauvegarder la référence du timeout
       state.timerTimeout = setTimeout(() => {
         if (state.timerRunning) {
           state.timerRunning = false;
-          endGame();
+          endGame(false);
         }
       }, 5000);
     }
 
-    function updatePlant() {
-      const level = Math.min(Math.floor(state.currentStreak / 5), 4);
-      document.getElementById('plantEmoji').textContent = plantEmojis[level];
-      document.getElementById('streakCount').textContent = state.currentStreak;
-    }
-
-    function endGame() {
+    function endGame(showAnswer = false, userAnswer = null) {
       state.timerRunning = false;
-      const isHira = state.currentGameMode === 'hiragana';
+      clearTimeout(state.timerTimeout);
+      
+      // Sauvegarder les stats
+      const data = state.currentGameType === 'hiragana' ? hiraganaData : katakanaData;
+      const isHira = state.currentGameType === 'hiragana';
+      
       if (isHira) {
-        state.maxStreakHira = Math.max(state.maxStreakHira, state.currentStreak);
+        localStorage.setItem('maxStreakHira', Math.max(parseInt(localStorage.getItem('maxStreakHira') || 0), state.currentStreak));
       } else {
-        state.maxStreakKata = Math.max(state.maxStreakKata, state.currentStreak);
+        localStorage.setItem('maxStreakKata', Math.max(parseInt(localStorage.getItem('maxStreakKata') || 0), state.currentStreak));
       }
       
-      // Donner EXP seulement si streak >= 5
-      if (state.currentStreak >= 5) {
-        state.totalExp += state.currentExp;
-      } else {
-        state.currentExp = 0;
-      }
+      localStorage.setItem('totalExp', parseInt(localStorage.getItem('totalExp') || 0) + state.currentExp);
+      localStorage.setItem('totalGames', parseInt(localStorage.getItem('totalGames') || 0) + 1);
       
-      state.totalGames++;
-      saveStats();
+      // Sauvegarder aussi côté serveur
+      fetch(`/api/user/${state.userId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxStreakHira: isHira ? state.currentStreak : null,
+          maxStreakKata: !isHira ? state.currentStreak : null,
+          totalExp: state.currentExp,
+          totalGames: 1
+        })
+      });
       
       document.getElementById('finalStreak').textContent = state.currentStreak;
       document.getElementById('finalExp').textContent = state.currentExp;
-      switchPage('gameover');
+      
+      // Afficher la réponse si raté
+      if (showAnswer === false) {
+        const content = document.getElementById('gameContent');
+        const item = (state.currentGameType === 'hiragana' ? hiraganaData : katakanaData)
+          .find(x => x.char === state.currentChar);
+        
+        content.innerHTML += `
+          <div class="answer-reveal">
+            <div class="answer-label">Bonne réponse</div>
+            <div class="answer-text">${item.romaji}</div>
+          </div>
+        `;
+      }
+      
+      setTimeout(() => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelector('.gameover-page').classList.add('active');
+      }, 1500);
     }
 
     function restartGame() {
-      startGame(state.currentGameMode);
+      startGame(state.currentGameType, state.currentGameDifficulty);
     }
 
     function quitGame() {
-      switchPage('games');
+      goToPage('games');
     }
-
-    async function saveStats() {
-      await fetch(`/api/user/${state.userId}/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          maxStreakHira: state.maxStreakHira,
-          maxStreakKata: state.maxStreakKata,
-          totalExp: state.totalExp,
-          totalGames: state.totalGames
-        })
-      });
-      loadLeaderboard();
-    }
-
-    async function saveSettings() {
-      state.username = document.getElementById('pseudoInput').value;
-      await fetch(`/api/user/${state.userId}/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: state.username,
-          avatarColor: state.avatarColor
-        })
-      });
-      updateUI();
-      closeModal('settingsModal');
-      loadLeaderboard();
-    }
-
-    function openModal(id) {
-      document.getElementById(id).classList.add('active');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('active');
-    }
-
-    init();
   </script>
 </body>
 </html>
