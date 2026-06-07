@@ -718,7 +718,6 @@
           <button class="sort-btn active" data-sort="exp" onclick="changeSortLeaderboard('exp')">💰 EXP</button>
           <button class="sort-btn" data-sort="hiragana" onclick="changeSortLeaderboard('hiragana')">あ Hiragana</button>
           <button class="sort-btn" data-sort="katakana" onclick="changeSortLeaderboard('katakana')">ア Katakana</button>
-          <button class="sort-btn" data-sort="all" onclick="changeSortLeaderboard('all')">🌟 Tout</button>
           <button class="sort-btn" onclick="showMyProfile()" style="margin-left: auto;">👤 Mon Profile</button>
         </div>
 
@@ -953,11 +952,6 @@
       const res = await fetch('/api/leaderboard');
       let leaderboard = await res.json();
 
-      // Calculer le score global
-      leaderboard.forEach(player => {
-        player.overallScore = player.maxStreakHira + player.maxStreakKata + Math.floor(player.totalExp / 10);
-      });
-
       // Configurer l'affichage des colonnes
       const col1 = document.getElementById('col1');
       const col2 = document.getElementById('col2');
@@ -975,14 +969,6 @@
         col2.style.display = 'none';
         col3.style.display = 'block';
         col3.textContent = 'Katakana';
-      } else if (sortBy === 'all') {
-        leaderboard.sort((a, b) => b.overallScore - a.overallScore);
-        col1.style.display = 'block';
-        col2.style.display = 'block';
-        col3.style.display = 'block';
-        col1.textContent = 'Hiragana';
-        col2.textContent = 'Katakana';
-        col3.textContent = 'Score Overall';
       } else {
         leaderboard.sort((a, b) => b.totalExp - a.totalExp);
         col1.style.display = 'none';
@@ -993,16 +979,12 @@
 
       const list = document.getElementById('leaderboardList');
       list.innerHTML = leaderboard.map((player, idx) => {
-        let stat1, stat2, stat3;
+        let stat3;
         
         if (sortBy === 'hiragana') {
           stat3 = player.maxStreakHira;
         } else if (sortBy === 'katakana') {
           stat3 = player.maxStreakKata;
-        } else if (sortBy === 'all') {
-          stat1 = player.maxStreakHira;
-          stat2 = player.maxStreakKata;
-          stat3 = player.overallScore;
         } else {
           stat3 = player.totalExp;
         }
@@ -1014,8 +996,6 @@
               <div class="avatar-medium" style="background: ${player.avatarColor}">${player.username[0]}</div>
               <div class="player-name">${player.username}</div>
             </div>
-            ${sortBy === 'all' ? `<div class="stat-cell">${stat1}</div>` : ''}
-            ${sortBy === 'all' ? `<div class="stat-cell">${stat2}</div>` : ''}
             <div class="stat-cell">${stat3}</div>
           </div>
         `;
@@ -1155,9 +1135,15 @@
       } else {
         state.maxStreakKata = Math.max(state.maxStreakKata, state.currentStreak);
       }
-      state.totalExp += state.currentExp;
-      state.totalGames++;
       
+      // Donner EXP seulement si streak >= 5
+      if (state.currentStreak >= 5) {
+        state.totalExp += state.currentExp;
+      } else {
+        state.currentExp = 0;
+      }
+      
+      state.totalGames++;
       saveStats();
       
       document.getElementById('finalStreak').textContent = state.currentStreak;
