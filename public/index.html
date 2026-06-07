@@ -86,6 +86,30 @@
       background: var(--primary);
     }
 
+    .sort-btn {
+      padding: 10px 20px;
+      border: 2px solid #e5e7eb;
+      background: var(--light);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .sort-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .sort-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
     .header-right {
       display: flex;
       align-items: center;
@@ -689,13 +713,21 @@
       <!-- LEADERBOARD PAGE -->
       <div id="leaderboard" class="page active">
         <h1 style="margin-bottom: 30px; font-size: 28px; font-weight: 700;">Classement</h1>
+        
+        <div style="display: flex; gap: 15px; margin-bottom: 30px;">
+          <button class="sort-btn active" data-sort="exp" onclick="changeSortLeaderboard('exp')">💰 EXP</button>
+          <button class="sort-btn" data-sort="hiragana" onclick="changeSortLeaderboard('hiragana')">あ Hiragana</button>
+          <button class="sort-btn" data-sort="katakana" onclick="changeSortLeaderboard('katakana')">ア Katakana</button>
+          <button class="sort-btn" onclick="showMyProfile()" style="margin-left: auto;">👤 Mon Profile</button>
+        </div>
+
         <div class="leaderboard-table">
           <div class="leaderboard-header">
             <div>#</div>
             <div>Joueur</div>
             <div>Hiragana</div>
             <div>Katakana</div>
-            <div>EXP Total</div>
+            <div id="sortHeader">EXP Total</div>
           </div>
           <div id="leaderboardList"></div>
         </div>
@@ -878,7 +910,8 @@
       currentExp: 0,
       currentChar: null,
       correctAnswer: null,
-      timerRunning: false
+      timerRunning: false,
+      timerTimeout: null
     };
 
     const socket = io();
@@ -912,9 +945,25 @@
       });
     }
 
-    async function loadLeaderboard() {
+    let currentLeaderboardSort = 'exp';
+
+    async function loadLeaderboard(sortBy = 'exp') {
+      currentLeaderboardSort = sortBy;
       const res = await fetch('/api/leaderboard');
-      const leaderboard = await res.json();
+      let leaderboard = await res.json();
+
+      // Trier selon la catégorie
+      if (sortBy === 'hiragana') {
+        leaderboard.sort((a, b) => b.maxStreakHira - a.maxStreakHira);
+        document.getElementById('sortHeader').textContent = 'Hiragana';
+      } else if (sortBy === 'katakana') {
+        leaderboard.sort((a, b) => b.maxStreakKata - a.maxStreakKata);
+        document.getElementById('sortHeader').textContent = 'Katakana';
+      } else {
+        leaderboard.sort((a, b) => b.totalExp - a.totalExp);
+        document.getElementById('sortHeader').textContent = 'EXP Total';
+      }
+
       const list = document.getElementById('leaderboardList');
       list.innerHTML = leaderboard.map((player, idx) => `
         <div class="leaderboard-row" onclick="showProfile('${player.id}')">
@@ -925,9 +974,19 @@
           </div>
           <div class="stat-cell">${player.maxStreakHira}</div>
           <div class="stat-cell">${player.maxStreakKata}</div>
-          <div class="stat-cell">${player.totalExp}</div>
+          <div class="stat-cell">${sortBy === 'hiragana' ? player.maxStreakHira : sortBy === 'katakana' ? player.maxStreakKata : player.totalExp}</div>
         </div>
       `).join('');
+    }
+
+    function changeSortLeaderboard(sortBy) {
+      document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`[data-sort="${sortBy}"]`).classList.add('active');
+      loadLeaderboard(sortBy);
+    }
+
+    function showMyProfile() {
+      showProfile(state.userId);
     }
 
     async function showProfile(userId) {
@@ -1014,13 +1073,19 @@
     }
 
     function startTimer() {
+      // Clear le timer précédent s'il existe
+      if (state.timerTimeout) {
+        clearTimeout(state.timerTimeout);
+      }
+      
       state.timerRunning = true;
       document.getElementById('timerBar').style.animation = 'none';
       setTimeout(() => {
         document.getElementById('timerBar').style.animation = 'timerBar 5s linear forwards';
       }, 10);
       
-      setTimeout(() => {
+      // Sauvegarder la référence du timeout
+      state.timerTimeout = setTimeout(() => {
         if (state.timerRunning) {
           state.timerRunning = false;
           endGame();
