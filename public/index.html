@@ -718,16 +718,17 @@
           <button class="sort-btn active" data-sort="exp" onclick="changeSortLeaderboard('exp')">💰 EXP</button>
           <button class="sort-btn" data-sort="hiragana" onclick="changeSortLeaderboard('hiragana')">あ Hiragana</button>
           <button class="sort-btn" data-sort="katakana" onclick="changeSortLeaderboard('katakana')">ア Katakana</button>
+          <button class="sort-btn" data-sort="all" onclick="changeSortLeaderboard('all')">🌟 Tout</button>
           <button class="sort-btn" onclick="showMyProfile()" style="margin-left: auto;">👤 Mon Profile</button>
         </div>
 
         <div class="leaderboard-table">
-          <div class="leaderboard-header">
+          <div class="leaderboard-header" id="leaderboardHeader">
             <div>#</div>
             <div>Joueur</div>
-            <div>Hiragana</div>
-            <div>Katakana</div>
-            <div id="sortHeader">EXP Total</div>
+            <div id="col1">Hiragana</div>
+            <div id="col2">Katakana</div>
+            <div id="col3">EXP Total</div>
           </div>
           <div id="leaderboardList"></div>
         </div>
@@ -952,31 +953,60 @@
       const res = await fetch('/api/leaderboard');
       let leaderboard = await res.json();
 
+      // Calculer le score global pour chaque joueur
+      leaderboard.forEach(player => {
+        player.overallScore = player.maxStreakHira + player.maxStreakKata + Math.floor(player.totalExp / 10);
+      });
+
       // Trier selon la catégorie
       if (sortBy === 'hiragana') {
         leaderboard.sort((a, b) => b.maxStreakHira - a.maxStreakHira);
-        document.getElementById('sortHeader').textContent = 'Hiragana';
+        document.getElementById('col1').textContent = 'Katakana';
+        document.getElementById('col2').textContent = 'EXP';
+        document.getElementById('col3').textContent = 'Hiragana';
       } else if (sortBy === 'katakana') {
         leaderboard.sort((a, b) => b.maxStreakKata - a.maxStreakKata);
-        document.getElementById('sortHeader').textContent = 'Katakana';
+        document.getElementById('col1').textContent = 'Hiragana';
+        document.getElementById('col2').textContent = 'EXP';
+        document.getElementById('col3').textContent = 'Katakana';
+      } else if (sortBy === 'all') {
+        leaderboard.sort((a, b) => b.overallScore - a.overallScore);
+        document.getElementById('col1').textContent = 'Hiragana';
+        document.getElementById('col2').textContent = 'Katakana';
+        document.getElementById('col3').textContent = 'Score Overall';
       } else {
         leaderboard.sort((a, b) => b.totalExp - a.totalExp);
-        document.getElementById('sortHeader').textContent = 'EXP Total';
+        document.getElementById('col1').textContent = 'Hiragana';
+        document.getElementById('col2').textContent = 'Katakana';
+        document.getElementById('col3').textContent = 'EXP Total';
       }
 
       const list = document.getElementById('leaderboardList');
-      list.innerHTML = leaderboard.map((player, idx) => `
-        <div class="leaderboard-row" onclick="showProfile('${player.id}')">
-          <div class="rank">${idx + 1}</div>
-          <div class="player-info">
-            <div class="avatar-medium" style="background: ${player.avatarColor}">${player.username[0]}</div>
-            <div class="player-name">${player.username}</div>
+      list.innerHTML = leaderboard.map((player, idx) => {
+        let stat3;
+        if (sortBy === 'hiragana') {
+          stat3 = player.maxStreakHira;
+        } else if (sortBy === 'katakana') {
+          stat3 = player.maxStreakKata;
+        } else if (sortBy === 'all') {
+          stat3 = player.overallScore;
+        } else {
+          stat3 = player.totalExp;
+        }
+
+        return `
+          <div class="leaderboard-row" onclick="showProfile('${player.id}')">
+            <div class="rank">${idx + 1}</div>
+            <div class="player-info">
+              <div class="avatar-medium" style="background: ${player.avatarColor}">${player.username[0]}</div>
+              <div class="player-name">${player.username}</div>
+            </div>
+            <div class="stat-cell">${sortBy === 'hiragana' ? player.maxStreakKata : sortBy === 'katakana' ? player.maxStreakHira : player.maxStreakHira}</div>
+            <div class="stat-cell">${sortBy === 'hiragana' ? player.totalExp : sortBy === 'katakana' ? player.totalExp : player.maxStreakKata}</div>
+            <div class="stat-cell">${stat3}</div>
           </div>
-          <div class="stat-cell">${player.maxStreakHira}</div>
-          <div class="stat-cell">${player.maxStreakKata}</div>
-          <div class="stat-cell">${sortBy === 'hiragana' ? player.maxStreakHira : sortBy === 'katakana' ? player.maxStreakKata : player.totalExp}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function changeSortLeaderboard(sortBy) {
